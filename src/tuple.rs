@@ -1,6 +1,6 @@
 use std::ops::{Add, BitXor, Div, Mul, Neg, Sub};
 
-use crate::util::eq_f64;
+use crate::{util::eq_f64, color::Color};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Tuple {
@@ -37,6 +37,12 @@ impl Tuple {
 
     pub fn normalize(&self) -> Tuple {
         *self / self.magnitude()
+    }
+}
+
+impl From<Color> for Tuple {
+    fn from(value: Color) -> Self {
+        Tuple::new(value.red, value.green, value.blue, 0.0)
     }
 }
 
