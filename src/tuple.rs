@@ -1,13 +1,13 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, BitXor, Div, Mul, Neg, Sub};
 
 use crate::util::eq_f64;
 
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct Tuple {
-    x: f64,
-    y: f64,
-    z: f64,
-    w: f64,
+pub struct Tuple {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub w: f64,
 }
 
 impl Tuple {
@@ -15,30 +15,29 @@ impl Tuple {
         Tuple { x, y, z, w }
     }
 
-    pub(crate) fn point(x: f64, y: f64, z: f64) -> Self {
+    pub fn point(x: f64, y: f64, z: f64) -> Self {
         Tuple::new(x, y, z, 1.0)
     }
 
-    pub(crate) fn vector(x: f64, y: f64, z: f64) -> Self {
+    pub fn vector(x: f64, y: f64, z: f64) -> Self {
         Tuple::new(x, y, z, 0.0)
     }
 
-    pub(crate) fn is_point(&self) -> bool {
+    pub fn is_point(&self) -> bool {
         self.w == 1.0
     }
 
-    pub(crate) fn is_vector(&self) -> bool {
+    pub fn is_vector(&self) -> bool {
         self.w == 0.0
     }
 
-    pub(crate) fn magnitude(&self) -> f64 {
+    pub fn magnitude(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2) + self.w.powi(2)).sqrt()
     }
 
-    pub(crate) fn normalize(&self) -> Tuple {
+    pub fn normalize(&self) -> Tuple {
         *self / self.magnitude()
     }
-
 }
 
 impl PartialEq for Tuple {
@@ -80,12 +79,7 @@ impl Neg for Tuple {
     type Output = Tuple;
 
     fn neg(self) -> Self::Output {
-        Tuple::new(
-            -self.x,
-            -self.y,
-            -self.z,
-            -self.w,
-        )
+        Tuple::new(-self.x, -self.y, -self.z, -self.w)
     }
 }
 
@@ -93,12 +87,7 @@ impl Mul<f64> for Tuple {
     type Output = Tuple;
 
     fn mul(self, rhs: f64) -> Self::Output {
-        Tuple::new(
-            self.x * rhs,
-            self.y * rhs,
-            self.z * rhs,
-            self.w * rhs,
-        )
+        Tuple::new(self.x * rhs, self.y * rhs, self.z * rhs, self.w * rhs)
     }
 }
 
@@ -106,11 +95,26 @@ impl Div<f64> for Tuple {
     type Output = Tuple;
 
     fn div(self, rhs: f64) -> Self::Output {
-        Tuple::new(
-            self.x / rhs,
-            self.y / rhs,
-            self.z / rhs,
-            self.w / rhs,
+        Tuple::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
+    }
+}
+
+impl Mul for Tuple {
+    type Output = f64;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        return self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w;
+    }
+}
+
+impl BitXor for Tuple {
+    type Output = Tuple;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Tuple::vector(
+            self.y * rhs.z - self.z * rhs.y,
+            self.z * rhs.x - self.x * rhs.z,
+            self.x * rhs.y - self.y * rhs.x,
         )
     }
 }
@@ -219,16 +223,47 @@ mod tests {
         assert!(eq_f64(Tuple::vector(1., 0., 0.).magnitude(), 1.));
         assert!(eq_f64(Tuple::vector(0., 1., 0.).magnitude(), 1.));
         assert!(eq_f64(Tuple::vector(0., 0., 1.).magnitude(), 1.));
-        assert!(eq_f64(Tuple::vector(1., 2., 3.).magnitude(), 14.0f64.sqrt()));
-        assert!(eq_f64(Tuple::vector(-1., -2., -3.).magnitude(), 14.0f64.sqrt()));
+        assert!(eq_f64(
+            Tuple::vector(1., 2., 3.).magnitude(),
+            14.0f64.sqrt()
+        ));
+        assert!(eq_f64(
+            Tuple::vector(-1., -2., -3.).magnitude(),
+            14.0f64.sqrt()
+        ));
     }
 
     #[test]
     fn normalizing_vectors() {
-        assert_eq!(Tuple::vector(1., 0., 0.), Tuple::vector(4., 0., 0.).normalize());
+        assert_eq!(
+            Tuple::vector(1., 0., 0.),
+            Tuple::vector(4., 0., 0.).normalize()
+        );
         let sqrt14 = 14f64.sqrt();
         let normalized = Tuple::vector(1., 2., 3.).normalize();
-        assert_eq!(Tuple::vector(1. / sqrt14, 2. / sqrt14, 3. / sqrt14), normalized);
+        assert_eq!(
+            Tuple::vector(1. / sqrt14, 2. / sqrt14, 3. / sqrt14),
+            normalized
+        );
         assert!(eq_f64(1., normalized.magnitude()));
+    }
+
+    #[test]
+    fn the_dot_product_of_two_tuples() {
+        let a = Tuple::vector(1., 2., 3.);
+        let b = Tuple::vector(2.0, 3.0, 4.0);
+
+        assert!(eq_f64(20.0, a * b));
+    }
+
+    #[test]
+    fn the_cross_product_of_two_vectors() {
+        let a = Tuple::vector(1.0, 2.0, 3.0);
+        let b = Tuple::vector(2.0, 3.0, 4.0);
+        let a_cross_b = Tuple::vector(-1.0, 2.0, -1.0);
+        let b_cross_a = Tuple::vector(1.0, -2.0, 1.0);
+
+        assert_eq!(a_cross_b, a ^ b);
+        assert_eq!(b_cross_a, b ^ a);
     }
 }
