@@ -1,4 +1,7 @@
-use std::ops::{Add, Mul, Sub};
+use std::{
+    cmp::{max, min},
+    ops::{Add, Mul, Sub},
+};
 
 use crate::tuple::Tuple;
 
@@ -12,6 +15,15 @@ pub struct Color {
 impl Color {
     pub fn new(red: f64, green: f64, blue: f64) -> Self {
         Color { red, green, blue }
+    }
+
+    pub fn to_ppm(self) -> (u8, u8, u8) {
+        let scaled = self * 255.0;
+        (
+            max(0, min(255, scaled.red.round() as u8)),
+            max(0, min(255, scaled.green.round() as u8)),
+            max(0, min(255, scaled.blue.round() as u8)),
+        )
     }
 }
 
@@ -82,6 +94,17 @@ mod tests {
     }
 
     #[test]
+    fn ppm_converts_to_ppm() {
+        let c1 = Color::new(1.5, 0.0, 0.0);
+        let c2 = Color::new(0.0, 0.5, 0.0);
+        let c3 = Color::new(-0.5, 0.0, 1.0);
+
+        assert_eq!((255, 0, 0), c1.to_ppm());
+        assert_eq!((0, 128, 0), c2.to_ppm());
+        assert_eq!((0, 0, 255), c3.to_ppm());
+    }
+
+    #[test]
     fn adding_colors() {
         let c1 = Color::new(0.9, 0.6, 0.75);
         let c2 = Color::new(0.7, 0.1, 0.25);
@@ -89,7 +112,7 @@ mod tests {
 
         assert_eq!(expected, c1 + c2);
     }
-    
+
     #[test]
     fn subtracting_colors() {
         let c1 = Color::new(0.9, 0.6, 0.75);
