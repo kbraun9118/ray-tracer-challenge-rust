@@ -61,6 +61,28 @@ impl Matrix {
                 .collect(),
         }
     }
+
+    fn determinate(&self) -> f64 {
+        assert!(self.width() == 2 && self.height() == 2);
+        self[(0, 0)] * self[(1, 1)] - self[(0, 1)] * self[(1, 0)]
+    }
+
+    fn sub_matrix(&self, row: usize, column: usize) -> Matrix {
+        let mut matrix = Matrix::new(self.width() - 1, self.height() - 1);
+        for x in 0..self.width() {
+            if x != column {
+                for y in 0..self.height() {
+                    if y != row {
+                        matrix[(
+                            if y > row { y - 1 } else { y },
+                            if x > column { x - 1 } else { x },
+                        )] = self[(y, x)]
+                    }
+                }
+            }
+        }
+        matrix
+    }
 }
 
 impl From<Vec<Vec<f64>>> for Matrix {
@@ -323,5 +345,41 @@ mod tests {
         ]);
 
         assert_eq!(expected, a.transpose());
+    }
+
+    #[test]
+    fn calculating_the_determinate_of_a_2x2_matrix() {
+        let a = Matrix::from(vec![vec![1.0, 5.0], vec![-3.0, 2.0]]);
+
+        assert_eq!(17.0, a.determinate());
+    }
+
+    #[test]
+    fn a_submatrix_of_a_3x3_matrix_is_a_2x2_matrix() {
+        let a = Matrix::from(vec![
+            vec![1.0, 5.0, 0.0],
+            vec![-3.0, 2.0, 7.0],
+            vec![0.0, 6.0, -3.0],
+        ]);
+        let expected = Matrix::from(vec![vec![-3.0, 2.0], vec![0.0, 6.0]]);
+
+        assert_eq!(expected, a.sub_matrix(0, 2));
+    }
+
+    #[test]
+    fn a_submatrix_of_a_4x4_matrix_is_a_3x3_matrix() {
+        let a = Matrix::from(vec![
+            vec![-6.0, 1.0, 1.0, 6.0],
+            vec![-8.0, 5.0, 8.0, 6.0],
+            vec![-1.0, 0.0, 8.0, 2.0],
+            vec![-7.0, 1.0, -1.0, 1.0],
+        ]);
+        let expected = Matrix::from(vec![
+            vec![-6.0, 1.0, 6.0],
+            vec![-8.0, 8.0, 6.0],
+            vec![-7.0, -1.0, 1.0],
+        ]);
+
+        assert_eq!(expected, a.sub_matrix(2, 1));
     }
 }
