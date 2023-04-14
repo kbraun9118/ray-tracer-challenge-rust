@@ -6,7 +6,7 @@ use std::{
 
 use crate::{tuple::Tuple, util::eq_f64};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Matrix {
     width: usize,
     value: Vec<f64>,
@@ -170,7 +170,7 @@ impl PartialEq for Matrix {
     }
 }
 
-impl Mul for Matrix {
+impl Mul for &Matrix {
     type Output = Matrix;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -189,7 +189,7 @@ impl Mul for Matrix {
     }
 }
 
-impl Mul<Tuple> for Matrix {
+impl Mul<Tuple> for &Matrix {
     type Output = Tuple;
 
     fn mul(self, rhs: Tuple) -> Self::Output {
@@ -312,7 +312,7 @@ mod tests {
             vec![16.0, 26.0, 46.0, 42.0],
         ]);
 
-        assert_eq!(expected, a * b);
+        assert_eq!(expected, &a * &b);
     }
 
     #[test]
@@ -356,7 +356,7 @@ mod tests {
         let b = Tuple::new(1.0, 2.0, 3.0, 1.0);
         let expected = Tuple::new(18.0, 24.0, 33.0, 1.0);
 
-        assert_eq!(expected, a * b)
+        assert_eq!(expected, &a * b)
     }
 
     #[test]
@@ -370,13 +370,13 @@ mod tests {
 
         let identity = Matrix::identity(4);
 
-        let b = a.clone() * identity.clone();
+        let b = &a * &identity;
 
         assert_eq!(a, b);
 
         let a = Tuple::new(1.0, 2.0, 3.0, 4.0);
 
-        assert_eq!(a, identity * a)
+        assert_eq!(a, &identity * a)
     }
 
     #[test]
@@ -608,7 +608,7 @@ mod tests {
             vec![6.0, -2.0, 0.0, 5.0],
         ]);
 
-        let c = a.clone() * b.clone();
-        assert_eq!(a, c * b.inverse().unwrap());
+        let c = &a * &b;
+        assert_eq!(a, &c * &b.inverse().unwrap());
     }
 }
