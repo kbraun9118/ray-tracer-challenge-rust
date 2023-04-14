@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     ops::{Index, IndexMut, Mul},
     vec,
 };
@@ -82,6 +83,19 @@ impl Matrix {
             }
         }
         matrix
+    }
+
+    fn minor(&self, row: usize, column: usize) -> f64 {
+        self.sub_matrix(row, column).determinate()
+    }
+
+    fn cofactor(&self, row: usize, column: usize) -> f64 {
+        let minor = self.minor(row, column);
+        if (row + column) % 2 == 0 {
+            minor
+        } else {
+            -1.0 * minor
+        }
     }
 }
 
@@ -381,5 +395,61 @@ mod tests {
         ]);
 
         assert_eq!(expected, a.sub_matrix(2, 1));
+    }
+
+    #[test]
+    fn computing_the_submatrix_of_a_3x3_matrix() {
+        let a = Matrix::from(vec![
+            vec![3.0, 5.0, 0.0],
+            vec![2.0, -1.0, -7.0],
+            vec![6.0, -1.0, 5.0],
+        ]);
+
+        let b = a.sub_matrix(1, 0);
+
+        assert_eq!(25.0, b.determinate());
+        assert_eq!(25.0, a.minor(1, 0));
+    }
+
+    #[test]
+    fn calculating_a_cofactor_of_a_3x3_matrix() {
+        let a = Matrix::from(vec![
+            vec![3.0, 5.0, 0.0],
+            vec![2.0, -1.0, -7.0],
+            vec![6.0, -1.0, 5.0],
+        ]);
+        assert_eq!(-12.0, a.minor(0, 0));
+        assert_eq!(-12.0, a.cofactor(0, 0));
+        assert_eq!(25.0, a.minor(1, 0));
+        assert_eq!(-25.0, a.cofactor(1, 0));
+    }
+
+    #[test]
+    fn calculating_the_determinant_of_a_3x3_matrix() {
+        let a = Matrix::from(vec![
+            vec![1.0, 2.0, 6.0],
+            vec![-5.0, 8.0, -4.0],
+            vec![2.0, 6.0, 4.0],
+        ]);
+        assert_eq!(56.0, a.cofactor(0, 0));
+        assert_eq!(12.0, a.cofactor(0, 1));
+        assert_eq!(-46.0, a.cofactor(0, 2));
+        assert_eq!(-196.0, a.determinate());
+    }
+
+    #[test]
+    fn calculating_the_determinant_of_a_4x4_matrix() {
+        let a = Matrix::from(vec![
+            vec![-2.0, -8.0, 3.0, 5.0],
+            vec![-3.0, 1.0, 7.0, 3.0],
+            vec![1.0, 2.0, -9.0, 6.0],
+            vec![-6.0, 7.0, 7.0, -9.0],
+        ]);
+        assert_eq!(690.0, a.cofactor(0, 0));
+        assert_eq!(447.0, a.cofactor(0, 1));
+        assert_eq!(210.0, a.cofactor(0, 2));
+        assert_eq!(51.0, a.cofactor(0, 3));
+        assert_eq!(-4071.0, a.determinate());
+        
     }
 }
