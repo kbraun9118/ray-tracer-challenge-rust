@@ -7,14 +7,14 @@ use std::{
 use crate::{tuple::Tuple, util::eq_f64};
 
 #[derive(Debug)]
-struct Matrix {
+pub struct Matrix {
     width: usize,
     value: Vec<f64>,
     det: RefCell<Option<f64>>,
 }
 
 impl Matrix {
-    fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         Matrix {
             width,
             value: vec![f64::default(); width * height],
@@ -22,7 +22,7 @@ impl Matrix {
         }
     }
 
-    fn identity(dimension: usize) -> Self {
+    pub fn identity(dimension: usize) -> Self {
         let mut m = Matrix::new(dimension, dimension);
         for i in 0..dimension {
             m[(i, i)] = 1.0
@@ -202,6 +202,15 @@ impl Mul<Tuple> for &Matrix {
             .collect::<Vec<_>>();
 
         Tuple::new(vals[0], vals[1], vals[2], vals[3])
+    }
+}
+
+impl Mul<Tuple> for Matrix {
+    type Output = Tuple;
+
+    fn mul(self, rhs: Tuple) -> Self::Output {
+        assert!(self.height() == 4 && self.width() == 4);
+        &self * rhs
     }
 }
 
