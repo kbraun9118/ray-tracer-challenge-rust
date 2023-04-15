@@ -4,7 +4,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{color::Color, error::RayTraceResult};
+use crate::{color::Color, error::RayTraceResult, tuple::Tuple};
 
 pub struct Canvas {
     width: usize,
@@ -13,9 +13,13 @@ pub struct Canvas {
 
 impl Canvas {
     pub fn new(width: usize, height: usize) -> Self {
+        Self::fill_with(width, height, Color::default())
+    }
+
+    pub fn fill_with(width: usize, height: usize, color: Color) -> Self {
         Self {
             width,
-            pixels: vec![Color::default(); width * height],
+            pixels: vec![color; width * height],
         }
     }
 
@@ -86,6 +90,20 @@ impl Index<(usize, usize)> for Canvas {
 impl IndexMut<(usize, usize)> for Canvas {
     fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut Self::Output {
         &mut self.pixels[y * self.width + x]
+    }
+}
+
+impl Index<Tuple> for Canvas {
+    type Output = Color;
+
+    fn index(&self, p: Tuple) -> &Self::Output {
+        &self.pixels[p.y.round() as usize * self.width + p.x.round() as usize]
+    }
+}
+
+impl IndexMut<Tuple> for Canvas {
+    fn index_mut(&mut self, p: Tuple) -> &mut Self::Output {
+        &mut self.pixels[p.y.round() as usize * self.width + p.x.round() as usize]
     }
 }
 

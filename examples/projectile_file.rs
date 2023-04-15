@@ -19,7 +19,7 @@ fn main() -> RayTraceResult<()> {
         p = tick(&e, p);
     }
 
-    c.save("simulation")?;
+    c.save("projectile")?;
     Ok(())
 }
 
@@ -40,9 +40,6 @@ fn plot(canvas: &mut Canvas, projectile: &Projectile) {
     let x = projectile.position.x.round() as usize;
     let y = height - projectile.position.y.round() as usize;
 
-    if x > canvas.width() || y > canvas.height() || x + y * canvas.width() > 450_000 {
-        println!("how")
-    }
     canvas[(x, y)] = color;
 }
 
