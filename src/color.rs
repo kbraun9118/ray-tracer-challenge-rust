@@ -17,6 +17,14 @@ impl Color {
         Color { red, green, blue }
     }
 
+    pub fn white() -> Self {
+        Color::new(1.0, 1.0, 1.0)
+    }
+
+    pub fn red() -> Self {
+        Color::new(1.0, 0.0, 0.0)
+    }
+
     pub fn to_ppm(self) -> (u8, u8, u8) {
         let scaled = self * 255.0;
         (

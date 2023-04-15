@@ -1,5 +1,5 @@
 [package]
-name = "ray-tracer-challenge"
+name = "ray_tracer_challenge"
 version = "0.1.0"
 edition = "2021"
 
