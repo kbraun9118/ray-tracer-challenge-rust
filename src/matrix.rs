@@ -116,7 +116,7 @@ impl Matrix {
         !eq_f64(0.0, self.determinate())
     }
 
-    fn inverse(&self) -> Option<Self> {
+    pub fn inverse(&self) -> Option<Self> {
         if !self.is_invertible() {
             return None;
         }
