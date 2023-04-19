@@ -3,14 +3,14 @@ use crate::{
     tuple::Tuple,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Ray {
     origin: Tuple,
     direction: Tuple,
 }
 
 impl Ray {
-    fn try_new(origin: Tuple, direction: Tuple) -> RayTraceResult<Self> {
+    pub fn try_new(origin: Tuple, direction: Tuple) -> RayTraceResult<Self> {
         if origin.is_point() && direction.is_vector() {
             Ok(Self { origin, direction })
         } else {
@@ -18,15 +18,15 @@ impl Ray {
         }
     }
 
-    fn origin(&self) -> &Tuple {
-        &self.origin
+    pub fn origin(&self) -> Tuple {
+        self.origin
     }
 
-    fn direciton(&self) -> &Tuple {
-        &self.direction
+    pub fn direciton(&self) -> Tuple {
+        self.direction
     }
 
-    fn position(&self, position: f64) -> Tuple {
+    pub fn position(&self, position: f64) -> Tuple {
         self.origin + (self.direction * position)
     }
 }
@@ -45,8 +45,8 @@ mod tests {
 
         let r = r.unwrap();
 
-        assert_eq!(origin, *r.origin());
-        assert_eq!(direction, *r.direciton());
+        assert_eq!(origin, r.origin());
+        assert_eq!(direction, r.direciton());
     }
 
     #[test]

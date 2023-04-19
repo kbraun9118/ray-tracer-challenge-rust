@@ -1,9 +1,8 @@
-pub mod tuple;
 pub mod canvas;
 pub mod color;
-pub mod matrix;
 pub mod error;
+pub mod intersection;
+pub mod matrix;
 pub mod transformation;
-pub mod ray;
-pub mod shape;
+pub mod tuple;
 pub(crate) mod util;
