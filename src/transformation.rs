@@ -1,7 +1,8 @@
 use std::ops::Mul;
 
-use crate::{matrix::Matrix, tuple::Tuple};
+use crate::{intersection::ray::Ray, matrix::Matrix, tuple::Tuple};
 
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Transformation {
     matrix: Matrix,
 }
@@ -103,6 +104,14 @@ impl Mul<Tuple> for Transformation {
 
     fn mul(self, rhs: Tuple) -> Self::Output {
         &self * rhs
+    }
+}
+
+impl Mul<Ray> for Transformation {
+    type Output = Ray;
+
+    fn mul(self, rhs: Ray) -> Self::Output {
+        Ray::try_new(&self * rhs.origin(), &self * rhs.direciton()).unwrap()
     }
 }
 
@@ -305,5 +314,27 @@ mod tests {
             .translation(10.0, 5.0, 7.0);
 
         assert_eq!(Tuple::point(15.0, 0.0, 7.0), tranformation * p)
+    }
+
+    #[test]
+    fn translating_a_ray() {
+        let r = Ray::try_new(Tuple::point(1.0, 2.0, 3.0), Tuple::vector(0.0, 1.0, 0.0)).unwrap();
+        let m = Transformation::identity().translation(3.0, 4.0, 5.0);
+
+        let r2 = m * r;
+
+        assert_eq!(Tuple::point(4.0, 6.0, 8.0), r2.origin());
+        assert_eq!(Tuple::vector(0.0, 1.0, 0.0), r2.direciton());
+    }
+
+    #[test]
+    fn scaling_a_ray() {
+        let r = Ray::try_new(Tuple::point(1.0, 2.0, 3.0), Tuple::vector(0.0, 1.0, 0.0)).unwrap();
+        let m = Transformation::identity().scale(2.0, 3.0, 4.0);
+
+        let r2 = m * r;
+
+        assert_eq!(Tuple::point(2.0, 6.0, 12.0), r2.origin());
+        assert_eq!(Tuple::vector(0.0, 3.0, 0.0), r2.direciton());
     }
 }

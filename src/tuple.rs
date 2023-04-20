@@ -1,6 +1,6 @@
 use std::ops::{Add, BitXor, Div, Mul, Neg, Sub};
 
-use crate::{util::eq_f64, color::Color};
+use crate::{color::Color, util::eq_f64};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Tuple {
@@ -17,6 +17,10 @@ impl Tuple {
 
     pub fn point(x: f64, y: f64, z: f64) -> Self {
         Tuple::new(x, y, z, 1.0)
+    }
+
+    pub fn origin() -> Self {
+        Self::point(0.0, 0.0, 0.0)
     }
 
     pub fn vector(x: f64, y: f64, z: f64) -> Self {

@@ -6,7 +6,7 @@ use std::{
 
 use crate::{tuple::Tuple, util::eq_f64};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Matrix {
     width: usize,
     value: Vec<f64>,
@@ -131,6 +131,12 @@ impl Matrix {
         }
 
         Some(inv)
+    }
+}
+
+impl Default for Matrix {
+    fn default() -> Self {
+        Self::identity(4)
     }
 }
 
