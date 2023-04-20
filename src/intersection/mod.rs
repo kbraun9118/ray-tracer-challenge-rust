@@ -1,3 +1,4 @@
+extern crate self as ray_tracer_challenge;
 use std::{collections::BinaryHeap, ops::Index, rc::Rc};
 
 use crate::util::eq_f64;
@@ -87,6 +88,7 @@ impl Index<usize> for IntersectionHeap {
 macro_rules! intersections {
     ( $( $x:expr ),* ) => {
         {
+            use ray_tracer_challenge::intersection::IntersectionHeap;
             let mut temp_inter = IntersectionHeap::new();
             $(
                 temp_inter.push($x);
@@ -98,9 +100,14 @@ macro_rules! intersections {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::eq_f64;
+    use super::*;
 
-    use super::{shape::Sphere, *};
+    use std::rc::Rc;
+
+    use crate::{
+        intersection::{shape::sphere::Sphere, Intersection},
+        util::eq_f64,
+    };
 
     #[test]
     fn an_intersection_encapsulates_t_and_object() {
