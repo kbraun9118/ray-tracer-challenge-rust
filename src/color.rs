@@ -17,6 +17,10 @@ impl Color {
         Color { red, green, blue }
     }
 
+    pub fn black() -> Self {
+        Color::new(0.0, 0.0, 0.0)
+    }
+
     pub fn white() -> Self {
         Color::new(1.0, 1.0, 1.0)
     }
