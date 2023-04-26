@@ -89,6 +89,12 @@ impl Transformation {
             matrix: &m * &self.matrix,
         }
     }
+
+    pub fn transpose(&self) -> Self {
+        Self {
+            matrix: self.matrix.transpose(),
+        }
+    }
 }
 
 impl Mul<Tuple> for &Transformation {
@@ -111,7 +117,7 @@ impl Mul<Ray> for Transformation {
     type Output = Ray;
 
     fn mul(self, rhs: Ray) -> Self::Output {
-        Ray::try_new(&self * rhs.origin(), &self * rhs.direciton()).unwrap()
+        Ray::new(&self * rhs.origin(), &self * rhs.direciton())
     }
 }
 
@@ -318,7 +324,7 @@ mod tests {
 
     #[test]
     fn translating_a_ray() {
-        let r = Ray::try_new(Tuple::point(1.0, 2.0, 3.0), Tuple::vector(0.0, 1.0, 0.0)).unwrap();
+        let r = Ray::new(Tuple::point(1.0, 2.0, 3.0), Tuple::vector(0.0, 1.0, 0.0));
         let m = Transformation::identity().translation(3.0, 4.0, 5.0);
 
         let r2 = m * r;
@@ -329,7 +335,7 @@ mod tests {
 
     #[test]
     fn scaling_a_ray() {
-        let r = Ray::try_new(Tuple::point(1.0, 2.0, 3.0), Tuple::vector(0.0, 1.0, 0.0)).unwrap();
+        let r = Ray::new(Tuple::point(1.0, 2.0, 3.0), Tuple::vector(0.0, 1.0, 0.0));
         let m = Transformation::identity().scale(2.0, 3.0, 4.0);
 
         let r2 = m * r;

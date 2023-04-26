@@ -54,7 +54,7 @@ impl Matrix {
             .collect()
     }
 
-    fn transpose(&self) -> Self {
+    pub fn transpose(&self) -> Self {
         Matrix {
             width: self.height(),
             value: (0..self.width)

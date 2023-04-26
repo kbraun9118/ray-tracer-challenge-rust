@@ -97,13 +97,13 @@ impl Index<Tuple> for Canvas {
     type Output = Color;
 
     fn index(&self, p: Tuple) -> &Self::Output {
-        &self.pixels[p.y.round() as usize * self.width + p.x.round() as usize]
+        &self.pixels[p.y().round() as usize * self.width + p.x().round() as usize]
     }
 }
 
 impl IndexMut<Tuple> for Canvas {
     fn index_mut(&mut self, p: Tuple) -> &mut Self::Output {
-        &mut self.pixels[p.y.round() as usize * self.width + p.x.round() as usize]
+        &mut self.pixels[p.y().round() as usize * self.width + p.x().round() as usize]
     }
 }
 
