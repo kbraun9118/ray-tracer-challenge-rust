@@ -1,0 +1,56 @@
+use std::rc::Rc;
+
+use ray_tracer_challenge::{
+    canvas::Canvas,
+    color::Color,
+    error::RayTraceResult,
+    intersection::{
+        ray::Ray,
+        shape::{material::Material, sphere::Sphere, Shape},
+    },
+    point_light::PointLight,
+    transformation::Transformation,
+    tuple::Tuple,
+};
+
+fn main() -> RayTraceResult<()> {
+    let mut c = Canvas::new(400, 400);
+    let material = Material::new().with_color(Color::new(1.0, 0.2, 1.0));
+    let mut sphere = Sphere::new();
+
+    sphere.set_material(material);
+    sphere.set_transformation(
+        Transformation::identity()
+            .scale(50.0, 50.0, 50.0)
+            .translation(200.0, 200.0, -300.0),
+    );
+    let sphere = Rc::new(sphere);
+
+    let light_position = Tuple::point(-100.0, -100.0, -600.0);
+    let light_color = Color::white();
+    let light = PointLight::new(light_position, light_color);
+
+    for y in 0..400 {
+        for x in 0..400 {
+            let r = Ray::new(
+                Tuple::point(200.0, 200.0, -500.0),
+                Tuple::vector(-200.0 + x as f64, -200.0 + y as f64, 500.0).normalize(),
+            );
+
+            let intersections = r.intersections(sphere.clone());
+
+            c[(x, y)] = if let Some(hit) = intersections.hit() {
+                let point = r.position(hit.t());
+                let normal = hit.object().normal_at(point);
+                let eye = -r.direciton();
+                hit.object().material().lighting(light, point, eye, normal)
+            } else {
+                Color::black()
+            };
+        }
+    }
+
+    c.save("spehere_shadow_color")?;
+
+    Ok(())
+}

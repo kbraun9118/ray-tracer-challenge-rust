@@ -74,6 +74,10 @@ impl IntersectionHeap {
             .filter(|i| i.t().is_sign_positive())
             .nth(0)
     }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
 }
 
 impl Index<usize> for IntersectionHeap {

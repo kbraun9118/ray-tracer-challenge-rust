@@ -15,7 +15,7 @@ fn main() -> RayTraceResult<()> {
             .translation(50.0, 50.0, 0.0);
         let point = transformation * point;
 
-        c[point] = Color::red();
+        c[point] = Color::create_red();
     }
 
     c.save("clock")?;

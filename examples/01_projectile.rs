@@ -11,14 +11,14 @@ fn main() {
     };
     let mut t = 0;
     println!("Projectile starting at {:?}", p.position);
-    while p.position.y > 0.0 {
+    while p.position.y() > 0.0 {
         p = tick(&e, p);
         t += 1;
         println!("After {t} ticks projectile is at {:?}", p.position);
     }
     println!(
         "Projectile took {t} ticks to land, and traveled {}",
-        p.position.x
+        p.position.x()
     );
 }
 

@@ -5,4 +5,5 @@ pub mod intersection;
 pub mod matrix;
 pub mod transformation;
 pub mod tuple;
+pub mod point_light;
 pub(crate) mod util;

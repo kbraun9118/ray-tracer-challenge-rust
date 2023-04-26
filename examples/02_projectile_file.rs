@@ -14,7 +14,7 @@ fn main() -> RayTraceResult<()> {
 
     let mut c = Canvas::new(900, 500);
 
-    while p.position.y > 0.0 {
+    while p.position.y() > 0.0 {
         plot(&mut c, &p);
         p = tick(&e, p);
     }
@@ -37,8 +37,8 @@ fn plot(canvas: &mut Canvas, projectile: &Projectile) {
     let color = Color::new(1.0, 0.0, 0.0);
     let height = canvas.height();
 
-    let x = projectile.position.x.round() as usize;
-    let y = height - projectile.position.y.round() as usize;
+    let x = projectile.position.x().round() as usize;
+    let y = height - projectile.position.y().round() as usize;
 
     canvas[(x, y)] = color;
 }

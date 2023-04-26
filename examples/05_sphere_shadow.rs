@@ -13,7 +13,7 @@ use ray_tracer_challenge::{
 fn main() -> RayTraceResult<()> {
     let mut c = Canvas::new(400, 400);
     let mut sphere = Sphere::new();
-    sphere.with_transformation(
+    sphere.set_transformation(
         Transformation::identity()
             .scale(50.0, 50.0, 50.0)
             .translation(200.0, 200.0, -300.0),
@@ -27,7 +27,7 @@ fn main() -> RayTraceResult<()> {
             );
 
             c[(x, y)] = if sphere.intersects(r).len() > 0 {
-                Color::red()
+                Color::create_red()
             } else {
                 Color::black()
             };

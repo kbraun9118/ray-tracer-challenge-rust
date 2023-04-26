@@ -4,15 +4,31 @@ use crate::{color::Color, util::eq_f64};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Tuple {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub w: f64,
+    x: f64,
+    y: f64,
+    z: f64,
+    w: f64,
 }
 
 impl Tuple {
     pub fn new(x: f64, y: f64, z: f64, w: f64) -> Self {
         Tuple { x, y, z, w }
+    }
+
+    pub fn x(&self) -> f64 {
+        self.x
+    }
+
+    pub fn y(&self) -> f64 {
+        self.y
+    }
+
+    pub fn z(&self) -> f64 {
+        self.z
+    }
+
+    pub fn w(&self) -> f64 {
+        self.w
     }
 
     pub fn point(x: f64, y: f64, z: f64) -> Self {
@@ -42,11 +58,19 @@ impl Tuple {
     pub fn normalize(&self) -> Tuple {
         *self / self.magnitude()
     }
+
+    pub fn reflect(&self, normal: Tuple) -> Tuple {
+        *self - normal * 2.0 * (*self * normal)
+    }
+
+    pub fn as_vector(&mut self) {
+        self.w = 0.0;
+    }
 }
 
 impl From<Color> for Tuple {
     fn from(value: Color) -> Self {
-        Tuple::new(value.red, value.green, value.blue, 0.0)
+        Tuple::new(value.red(), value.green(), value.blue(), 0.0)
     }
 }
 
@@ -276,4 +300,26 @@ mod tests {
         assert_eq!(a_cross_b, a ^ b);
         assert_eq!(b_cross_a, b ^ a);
     }
+
+    #[test]
+    fn reflecting_a_vector_approaching_at_45() {
+        let v = Tuple::vector(1.0, -1.0, 0.0);
+        let n = Tuple::vector(0.0, 1.0, 0.0);
+
+        let r = v.reflect(n);
+
+        assert_eq!(Tuple::vector(1.0, 1.0, 0.0), r);
+    }
+
+    #[test]
+    fn reflecting_a_vector_off_a_slanted_surface() {
+        let v = Tuple::vector(0.0, -1.0, 0.0);
+        let n = Tuple::vector(2f64.sqrt() / 2.0, 2f64.sqrt() / 2.0, 0.0);
+
+        let r = v.reflect(n);
+
+        assert_eq!(Tuple::vector(1.0, 0.0, 0.0), r);
+    }
+
+
 }

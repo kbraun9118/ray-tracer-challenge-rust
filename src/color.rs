@@ -7,14 +7,26 @@ use crate::tuple::Tuple;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Color {
-    pub red: f64,
-    pub green: f64,
-    pub blue: f64,
+    red: f64,
+    green: f64,
+    blue: f64,
 }
 
 impl Color {
     pub fn new(red: f64, green: f64, blue: f64) -> Self {
         Color { red, green, blue }
+    }
+
+    pub fn red(&self) -> f64 {
+        self.red
+    }
+
+    pub fn green(&self) -> f64 {
+        self.green
+    }
+
+    pub fn blue(&self) -> f64 {
+        self.blue
     }
 
     pub fn black() -> Self {
@@ -25,16 +37,16 @@ impl Color {
         Color::new(1.0, 1.0, 1.0)
     }
 
-    pub fn red() -> Self {
+    pub fn create_red() -> Self {
         Color::new(1.0, 0.0, 0.0)
     }
 
     pub fn to_ppm(self) -> (u8, u8, u8) {
         let scaled = self * 255.0;
         (
-            max(0, min(255, scaled.red.round() as u8)),
-            max(0, min(255, scaled.green.round() as u8)),
-            max(0, min(255, scaled.blue.round() as u8)),
+            max(0, min(255, scaled.red().round() as u8)),
+            max(0, min(255, scaled.green().round() as u8)),
+            max(0, min(255, scaled.blue().round() as u8)),
         )
     }
 }
@@ -42,9 +54,9 @@ impl Color {
 impl From<Tuple> for Color {
     fn from(value: Tuple) -> Self {
         Color {
-            red: value.x,
-            green: value.y,
-            blue: value.z,
+            red: value.x(),
+            green: value.y(),
+            blue: value.z(),
         }
     }
 }
