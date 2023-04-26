@@ -1,4 +1,4 @@
-use crate::{color::Color, point_light::PointLight, tuple::Tuple, util::eq_f64};
+use crate::{color::{Color, Colors}, point_light::PointLight, tuple::Tuple, util::eq_f64};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Material {
@@ -96,7 +96,7 @@ impl Material {
         let light_dot_normal = light_v * normal_v;
 
         let (diffuse, specular) = if light_dot_normal < 0.0 {
-            (Color::black(), Color::black())
+            (Colors::Black.into(), Colors::Black.into())
         } else {
             let diffuse = effective_color * self.diffuse() * light_dot_normal;
 
@@ -104,7 +104,7 @@ impl Material {
             let reflect_dot_eye = reflect_v * eye_v;
 
             if eq_f64(0.0, reflect_dot_eye) || reflect_dot_eye < 0.0 {
-                (diffuse, Color::black())
+                (diffuse, Colors::Black.into())
             } else {
                 let factor = reflect_dot_eye.powf(self.shininess());
                 (diffuse, light.intensity() * self.specular() * factor)
@@ -118,7 +118,7 @@ impl Material {
 impl Default for Material {
     fn default() -> Self {
         Self {
-            color: Color::white(),
+            color: Colors::White.into(),
             ambient: 0.1,
             diffuse: 0.9,
             specular: 0.9,
@@ -145,7 +145,7 @@ mod tests {
     fn the_default_material() {
         let m = Material::new();
 
-        assert_eq!(Color::white(), m.color());
+        assert_eq!(Color::from(Colors::White), m.color());
         assert_eq!(0.1, m.ambient());
         assert_eq!(0.9, m.diffuse());
         assert_eq!(0.9, m.specular());
@@ -159,7 +159,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Colors::White.into());
 
         let result = m.lighting(light, position, eye_v, normal_v);
 
@@ -173,7 +173,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 2f64.sqrt() / 2.0, -2f64.sqrt() / 2.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Colors::White.into());
 
         let result = m.lighting(light, position, eye_v, normal_v);
 
@@ -187,7 +187,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Colors::White.into());
 
         let result = m.lighting(light, position, eye_v, normal_v);
 
@@ -201,7 +201,7 @@ mod tests {
 
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
-        let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Color::white());
+        let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Colors::White.into());
 
         let result = m.lighting(light, position, eye_v, normal_v);
 

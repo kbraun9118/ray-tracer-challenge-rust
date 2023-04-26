@@ -25,14 +25,16 @@ impl PointLight {
 
 #[cfg(test)]
 mod tests {
+    use crate::color::Colors;
+
     use super::*;
 
     #[test]
     fn a_point_light_has_a_position_and_intisity() {
-        let intensity = Color::white();
+        let intensity = Colors::White.into();
         let position = Tuple::origin();
 
-        let light = PointLight::new(position,intensity);
+        let light = PointLight::new(position, intensity);
 
         assert_eq!(position, light.position());
         assert_eq!(intensity, light.intensity());

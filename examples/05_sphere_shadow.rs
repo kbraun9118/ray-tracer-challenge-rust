@@ -1,6 +1,6 @@
 use ray_tracer_challenge::{
     canvas::Canvas,
-    color::Color,
+    color::Colors,
     error::RayTraceResult,
     intersection::{
         ray::Ray,
@@ -27,9 +27,9 @@ fn main() -> RayTraceResult<()> {
             );
 
             c[(x, y)] = if sphere.intersects(r).len() > 0 {
-                Color::create_red()
+                Colors::Red.into()
             } else {
-                Color::black()
+                Colors::Black.into()
             };
         }
     }

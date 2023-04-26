@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use ray_tracer_challenge::{
     canvas::Canvas,
-    color::Color,
+    color::{Color, Colors},
     error::RayTraceResult,
     intersection::{
         ray::Ray,
@@ -27,7 +27,7 @@ fn main() -> RayTraceResult<()> {
     let sphere = Rc::new(sphere);
 
     let light_position = Tuple::point(-100.0, -100.0, -600.0);
-    let light_color = Color::white();
+    let light_color = Colors::White.into();
     let light = PointLight::new(light_position, light_color);
 
     for y in 0..400 {
@@ -45,7 +45,7 @@ fn main() -> RayTraceResult<()> {
                 let eye = -r.direciton();
                 hit.object().material().lighting(light, point, eye, normal)
             } else {
-                Color::black()
+                Colors::Black.into()
             };
         }
     }

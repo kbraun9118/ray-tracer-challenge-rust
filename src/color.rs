@@ -12,6 +12,12 @@ pub struct Color {
     blue: f64,
 }
 
+pub enum Colors {
+    Red,
+    White,
+    Black,
+}
+
 impl Color {
     pub fn new(red: f64, green: f64, blue: f64) -> Self {
         Color { red, green, blue }
@@ -29,18 +35,6 @@ impl Color {
         self.blue
     }
 
-    pub fn black() -> Self {
-        Color::new(0.0, 0.0, 0.0)
-    }
-
-    pub fn white() -> Self {
-        Color::new(1.0, 1.0, 1.0)
-    }
-
-    pub fn create_red() -> Self {
-        Color::new(1.0, 0.0, 0.0)
-    }
-
     pub fn to_ppm(self) -> (u8, u8, u8) {
         let scaled = self * 255.0;
         (
@@ -48,6 +42,18 @@ impl Color {
             max(0, min(255, scaled.green().round() as u8)),
             max(0, min(255, scaled.blue().round() as u8)),
         )
+    }
+}
+
+impl From<Colors> for Color {
+    fn from(value: Colors) -> Self {
+        let (red, green, blue) = match value {
+            Colors::Red => (1.0, 0.0, 0.0),
+            Colors::White => (1.0, 1.0, 1.0),
+            Colors::Black => (0.0, 0.0, 0.0),
+        };
+
+        Self::new(red, green, blue)
     }
 }
 
