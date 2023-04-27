@@ -37,12 +37,12 @@ fn main() -> RayTraceResult<()> {
                 Tuple::vector(-200.0 + x as f64, -200.0 + y as f64, 500.0).normalize(),
             );
 
-            let intersections = r.intersections(sphere.clone());
+            let mut intersections = r.intersections(sphere.clone());
 
             c[(x, y)] = if let Some(hit) = intersections.hit() {
                 let point = r.position(hit.t());
                 let normal = hit.object().normal_at(point);
-                let eye = -r.direciton();
+                let eye = -r.direction();
                 hit.object().material().lighting(light, point, eye, normal)
             } else {
                 Colors::Black.into()

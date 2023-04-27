@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::tuple::Tuple;
 
-use super::{IntersectionHeap, shape::Shape, Intersection};
+use super::{shape::Shape, Intersection, IntersectionHeap};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Ray {
@@ -19,7 +19,7 @@ impl Ray {
         self.origin
     }
 
-    pub fn direciton(&self) -> Tuple {
+    pub fn direction(&self) -> Tuple {
         self.direction
     }
 
@@ -29,7 +29,11 @@ impl Ray {
 
     pub fn intersections(&self, shape: Rc<dyn Shape>) -> IntersectionHeap {
         let mut heap = IntersectionHeap::new();
-        for i in shape.intersects(*self).into_iter().map(|i| Intersection::new(i, shape.clone())) {
+        for i in shape
+            .intersects(*self)
+            .into_iter()
+            .map(|i| Intersection::new(i, shape.clone()))
+        {
             heap.push(i);
         }
         heap
@@ -47,7 +51,7 @@ mod tests {
         let r = Ray::new(origin, direction);
 
         assert_eq!(origin, r.origin());
-        assert_eq!(direction, r.direciton());
+        assert_eq!(direction, r.direction());
     }
 
     #[test]
