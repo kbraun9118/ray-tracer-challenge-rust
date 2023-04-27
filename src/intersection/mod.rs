@@ -7,6 +7,7 @@ use self::shape::Shape;
 
 pub mod ray;
 pub mod shape;
+pub mod precomputation;
 
 #[derive(Debug, Clone)]
 pub struct Intersection {
@@ -23,8 +24,8 @@ impl Intersection {
         self.t
     }
 
-    pub fn object(&self) -> &dyn Shape {
-        self.object.as_ref()
+    pub fn object(&self) -> &Rc<dyn Shape> {
+        &self.object
     }
 }
 
@@ -68,15 +69,31 @@ impl IntersectionHeap {
         self.inner.push(i);
     }
 
-    pub fn hit(&self) -> Option<&Intersection> {
-        self.inner
-            .iter()
-            .filter(|i| i.t().is_sign_positive())
-            .nth(0)
+    pub fn hit(&mut self) -> Option<Intersection> {
+        while let Some(i) = self.inner.pop() {
+            if i.t().is_sign_positive() {
+                return Some(i)
+            }
+        } 
+        None
     }
 
     pub fn len(&self) -> usize {
         self.inner.len()
+    }
+
+    pub fn iter(&self) -> std::collections::binary_heap::Iter<Intersection> {
+        self.inner.iter()
+    }
+}
+
+impl IntoIterator for IntersectionHeap {
+    type Item = Intersection;
+
+    type IntoIter = std::collections::binary_heap::IntoIter<Intersection>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.inner.into_iter()
     }
 }
 
@@ -84,7 +101,9 @@ impl Index<usize> for IntersectionHeap {
     type Output = Intersection;
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.inner.iter().nth(index).unwrap()
+        let mut intersections = self.inner.iter().collect::<Vec<_>>();
+        intersections.sort();
+        intersections[intersections.len() - 1 - index]
     }
 }
 
@@ -119,7 +138,7 @@ mod tests {
         let i = Intersection::new(3.5, s.clone());
 
         assert!(eq_f64(3.5, i.t()));
-        assert_eq!(i.object(), s.as_ref())
+        assert_eq!(i.object().as_ref(), s.as_ref())
     }
 
     #[test]
@@ -129,9 +148,9 @@ mod tests {
         let i2 = Intersection::new(2.0, s.clone());
 
         let xs = intersections![i1, i2];
-        assert_eq!(xs[0].object(), s.as_ref());
+        assert_eq!(xs[0].object().as_ref(), s.as_ref());
         assert_eq!(xs[0].t(), 1.0);
-        assert_eq!(xs[1].object(), s.as_ref());
+        assert_eq!(xs[1].object().as_ref(), s.as_ref());
         assert_eq!(xs[1].t(), 2.0);
     }
 
@@ -141,12 +160,12 @@ mod tests {
         let i1 = Intersection::new(1.0, s.clone());
         let i2 = Intersection::new(2.0, s.clone());
 
-        let xs = intersections![i1.clone(), i2];
+        let mut xs = intersections![i1.clone(), i2];
 
         let hit = xs.hit();
 
         assert!(hit.is_some());
-        assert_eq!(&i1, hit.unwrap());
+        assert_eq!(i1, hit.unwrap());
     }
 
     #[test]
@@ -155,12 +174,12 @@ mod tests {
         let i1 = Intersection::new(-1.0, s.clone());
         let i2 = Intersection::new(1.0, s.clone());
 
-        let xs = intersections![i1, i2.clone()];
+        let mut xs = intersections![i1, i2.clone()];
 
         let hit = xs.hit();
 
         assert!(hit.is_some());
-        assert_eq!(&i2, hit.unwrap());
+        assert_eq!(i2, hit.unwrap());
     }
 
     #[test]
@@ -169,7 +188,7 @@ mod tests {
         let i1 = Intersection::new(-2.0, s.clone());
         let i2 = Intersection::new(-1.0, s.clone());
 
-        let xs = intersections![i1, i2];
+        let mut xs = intersections![i1, i2];
 
         let hit = xs.hit();
 
@@ -184,12 +203,12 @@ mod tests {
         let i3 = Intersection::new(-3.0, s.clone());
         let i4 = Intersection::new(2.0, s);
 
-        let xs = intersections![i1, i2, i3, i4.clone()];
+        let mut xs = intersections![i1, i2, i3, i4.clone()];
 
         let hit = xs.hit();
 
         assert!(hit.is_some());
 
-        assert_eq!(&i4, hit.unwrap());
+        assert_eq!(i4, hit.unwrap());
     }
 }

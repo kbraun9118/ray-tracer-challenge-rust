@@ -9,7 +9,6 @@ use super::{Shape, material::Material};
 pub struct Sphere {
     id: Uuid,
     center: Tuple,
-    _radius: f64,
     transformation: Option<Transformation>,
     material: Material
 }
@@ -19,7 +18,6 @@ impl Sphere {
         Self {
             id: Uuid::new_v4(),
             center: Tuple::origin(),
-            _radius: 1.0,
             transformation: None,
             material: Material::new(),
         }
@@ -32,8 +30,8 @@ impl Shape for Sphere {
 
         let sphere_to_ray = ray.origin() - self.center;
 
-        let a = ray.direciton() * ray.direciton();
-        let b = (ray.direciton() * sphere_to_ray) * 2.0;
+        let a = ray.direction() * ray.direction();
+        let b = (ray.direction() * sphere_to_ray) * 2.0;
         let c = sphere_to_ray * sphere_to_ray - 1.0;
 
         let discriminant = b.powi(2) - 4.0 * a * c;
@@ -86,12 +84,6 @@ impl From<Transformation> for Sphere {
         let mut sphere = Sphere::new();
         sphere.set_transformation(value);
         sphere
-    }
-}
-
-impl PartialEq for &dyn Shape {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
     }
 }
 

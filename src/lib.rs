@@ -6,4 +6,6 @@ pub mod matrix;
 pub mod transformation;
 pub mod tuple;
 pub mod point_light;
+pub mod world;
+pub mod camera;
 pub(crate) mod util;
