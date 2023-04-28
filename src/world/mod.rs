@@ -68,6 +68,7 @@ impl World {
                 comps.point(),
                 comps.eye_v(),
                 comps.normal_v(),
+                false,
             )
         } else {
             Colors::Black.into()
