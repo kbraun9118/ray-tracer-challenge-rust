@@ -25,7 +25,7 @@ impl Sphere {
 }
 
 impl Shape for Sphere {
-    fn intersects_object_space(&self, ray: Ray) -> Vec<f64> {
+    fn local_intersect(&self, ray: Ray) -> Vec<f64> {
         let sphere_to_ray = ray.origin() - self.center;
 
         let a = ray.direction() * ray.direction();
