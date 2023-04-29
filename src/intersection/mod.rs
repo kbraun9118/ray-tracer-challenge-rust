@@ -54,6 +54,7 @@ impl Ord for Intersection {
     }
 }
 
+#[derive(Debug)]
 pub struct IntersectionHeap {
     inner: BinaryHeap<Intersection>,
 }

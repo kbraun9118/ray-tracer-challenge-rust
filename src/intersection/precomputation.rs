@@ -1,6 +1,7 @@
 use crate::{
     intersection::{ray::Ray, Intersection},
     tuple::Tuple,
+    util::EPSILON,
 };
 
 use std::rc::Rc;
@@ -12,6 +13,7 @@ pub struct PreComputations {
     t: f64,
     object: Rc<dyn Shape>,
     point: Tuple,
+    over_point: Tuple,
     eye_v: Tuple,
     normal_v: Tuple,
     inside: bool,
@@ -33,6 +35,7 @@ impl PreComputations {
             t: intersection.t(),
             object: intersection.object().clone(),
             point,
+            over_point: point + normal_v * EPSILON,
             eye_v,
             normal_v,
             inside,
@@ -51,6 +54,10 @@ impl PreComputations {
         self.point
     }
 
+    pub fn over_point(&self) -> Tuple {
+        self.over_point
+    }
+
     pub fn eye_v(&self) -> Tuple {
         self.eye_v
     }
@@ -67,7 +74,7 @@ impl PreComputations {
 #[cfg(test)]
 mod tests {
 
-    use crate::intersection::shape::sphere::Sphere;
+    use crate::{intersection::shape::sphere::Sphere, transformation::Transformation};
 
     use super::*;
 
@@ -101,5 +108,18 @@ mod tests {
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.eye_v());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.normal_v());
         assert_eq!(true, comps.inside());
+    }
+
+    #[test]
+    fn the_hit_should_offset_the_point() {
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let mut s = Sphere::new();
+        s.set_transformation(Transformation::identity().translation(0.0, 0.0, 1.0));
+
+        let i = Intersection::new(5.0, Rc::new(s));
+        let comps = PreComputations::new(i.clone(), r);
+
+        assert!(comps.over_point().z() < -EPSILON / 2.0);
+        assert!(comps.point().z() > comps.over_point().z());
     }
 }

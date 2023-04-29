@@ -3,14 +3,15 @@ use std::f64::consts::PI;
 use ray_tracer_challenge::{
     camera::Camera,
     color::{Color, Colors},
+    error::RayTraceResult,
     intersection::shape::{material::Material, sphere::Sphere, Shape},
     point_light::PointLight,
     transformation::Transformation,
     tuple::Tuple,
-    world::World, error::RayTraceResult,
+    world::World,
 };
 
-fn main() -> RayTraceResult<()>{
+fn main() -> RayTraceResult<()> {
     let wall_material = Material::new()
         .with_color(Color::new(1.0, 0.9, 0.9))
         .with_specular(0.0);
@@ -86,7 +87,11 @@ fn main() -> RayTraceResult<()>{
         Colors::White.into(),
     ));
 
-    let mut camera = Camera::new(1000.0 * 1.5, 500.0 * 1.5, PI / 3.0);
+    // smaller resolution, faster rendering
+    let mut camera = Camera::new(200, 100, PI / 3.0);
+
+    // larger resolution, slower rendering
+    // let mut camera = Camera::new(1200 * 2, 600 * 2, PI / 3.0);
     camera.set_transformation(Transformation::view(
         Tuple::point(0.0, 1.5, -5.0),
         Tuple::point(0.0, 1.0, 0.0),

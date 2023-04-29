@@ -1,4 +1,4 @@
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::{
     canvas::Canvas, intersection::ray::Ray, transformation::Transformation, tuple::Tuple,
@@ -15,9 +15,9 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(h_size: f64, v_size: f64, field_of_view: f64) -> Self {
+    pub fn new(h_size: usize, v_size: usize, field_of_view: f64) -> Self {
         let half_view = (field_of_view / 2.0).tan();
-        let aspect = h_size / v_size;
+        let aspect = h_size as f64 / v_size as f64;
         let (half_width, half_height) = if eq_f64(1.0, aspect) || aspect > 1.0 {
             (half_view, half_view / aspect)
         } else {
@@ -25,12 +25,12 @@ impl Camera {
         };
 
         Self {
-            h_size,
-            v_size,
+            v_size: v_size as f64,
+            h_size: h_size as f64,
             transform: Transformation::identity(),
             half_width,
             half_height,
-            pixel_size: (half_width * 2.0) / h_size,
+            pixel_size: (half_width * 2.0) / h_size as f64,
         }
     }
 
@@ -56,7 +56,8 @@ impl Camera {
 
     pub fn render(&self, world: &World) -> Canvas {
         let mut image = Canvas::new(self.h_size as usize, self.v_size as usize);
-        let pb = ProgressBar::new((self.v_size * self.h_size ) as u64);
+        let pb = ProgressBar::new((self.v_size * self.h_size) as u64);
+        pb.set_style(ProgressStyle::with_template("{wide_bar} {percent}% {eta} {msg}").unwrap());
 
         for y in 0..self.v_size as usize {
             for x in 0..self.h_size as usize {
@@ -82,7 +83,7 @@ mod tests {
 
     #[test]
     fn constructing_a_camera() {
-        let c = Camera::new(160.0, 120.0, PI / 2.0);
+        let c = Camera::new(160, 120, PI / 2.0);
 
         assert_eq!(160.0, c.h_size);
         assert_eq!(120.0, c.v_size);
@@ -91,19 +92,19 @@ mod tests {
 
     #[test]
     fn the_pixel_size_for_a_horizontal_canvas() {
-        let c = Camera::new(200.0, 125.0, PI / 2.0);
+        let c = Camera::new(200, 125, PI / 2.0);
         assert!(eq_f64(0.01, c.pixel_size));
     }
 
     #[test]
     fn the_pixel_size_for_a_vertical_canvas() {
-        let c = Camera::new(125.0, 200.0, PI / 2.0);
+        let c = Camera::new(125, 200, PI / 2.0);
         assert!(eq_f64(0.01, c.pixel_size));
     }
 
     #[test]
     fn constructing_a_ray_through_the_center_of_the_canvas() {
-        let c = Camera::new(201.0, 101.0, PI / 2.0);
+        let c = Camera::new(201, 101, PI / 2.0);
         let r = c.ray_for_pixel(100, 50);
 
         assert_eq!(Tuple::origin(), r.origin());
@@ -112,7 +113,7 @@ mod tests {
 
     #[test]
     fn constructing_a_ray_through_a_corner_of_the_canvas() {
-        let c = Camera::new(201.0, 101.0, PI / 2.0);
+        let c = Camera::new(201, 101, PI / 2.0);
         let r = c.ray_for_pixel(0, 0);
 
         assert_eq!(Tuple::origin(), r.origin());
@@ -121,7 +122,7 @@ mod tests {
 
     #[test]
     fn constructing_a_ray_when_the_camera_is_transformed() {
-        let mut c = Camera::new(201.0, 101.0, PI / 2.0);
+        let mut c = Camera::new(201, 101, PI / 2.0);
         c.set_transformation(
             Transformation::identity()
                 .translation(0.0, -2.0, 5.0)
@@ -139,7 +140,7 @@ mod tests {
     #[test]
     fn rendering_a_world_with_a_camera() {
         let w = World::default();
-        let mut c = Camera::new(11.0, 11.0, PI / 2.0);
+        let mut c = Camera::new(11, 11, PI / 2.0);
         let from = Tuple::point(0.0, 0.0, -5.0);
         let to = Tuple::origin();
         let up = Tuple::vector(0.0, 1.0, 0.0);
