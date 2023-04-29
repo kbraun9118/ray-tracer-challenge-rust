@@ -3,14 +3,14 @@ use std::fmt::Debug;
 use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple};
 use uuid::Uuid;
 
-use super::{Shape, material::Material};
+use super::{material::Material, Shape};
 
 #[derive(Debug)]
 pub struct Sphere {
     id: Uuid,
     center: Tuple,
     transformation: Option<Transformation>,
-    material: Material
+    material: Material,
 }
 
 impl Sphere {
@@ -25,16 +25,14 @@ impl Sphere {
 }
 
 impl Shape for Sphere {
-    fn intersects(&self, ray: Ray) -> Vec<f64> {
-        let ray = self.transformation().inverse().unwrap() * ray;
-
+    fn intersects_object_space(&self, ray: Ray) -> Vec<f64> {
         let sphere_to_ray = ray.origin() - self.center;
 
         let a = ray.direction() * ray.direction();
         let b = (ray.direction() * sphere_to_ray) * 2.0;
         let c = sphere_to_ray * sphere_to_ray - 1.0;
 
-        let discriminant = b.powi(2) - 4.0 * a * c;
+        let discriminant = b.powf(2.0) - 4.0 * a * c;
 
         if discriminant < 0.0 {
             vec![]
@@ -60,12 +58,8 @@ impl Shape for Sphere {
         self.transformation = Some(transformation);
     }
 
-    fn normal_at(&self, point: Tuple) -> Tuple {
-        let object_point = self.transformation().inverse().unwrap() * point;
-        let object_normal = object_point - Tuple::origin();
-        let mut world_normal = self.transformation().inverse().unwrap().transpose() * object_normal;
-        world_normal.as_vector();
-        world_normal.normalize()
+    fn local_normal_at(&self, point: Tuple) -> Tuple {
+        point - Tuple::origin()
     }
 
     fn material(&self) -> Material {
@@ -75,8 +69,6 @@ impl Shape for Sphere {
     fn set_material(&mut self, material: Material) {
         self.material = material;
     }
-
-    
 }
 
 impl From<Transformation> for Sphere {
