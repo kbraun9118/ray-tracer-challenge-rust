@@ -10,10 +10,11 @@ use super::ray::Ray;
 
 pub mod material;
 pub mod sphere;
+pub mod plane;
 
 pub trait Shape: Debug {
     fn id(&self) -> Uuid;
-    fn intersects_object_space(&self, ray: Ray) -> Vec<f64>;
+    fn local_intersect(&self, ray: Ray) -> Vec<f64>;
     fn transformation(&self) -> Transformation;
     fn set_transformation(&mut self, transformation: Transformation);
     fn material(&self) -> Material;
@@ -22,7 +23,7 @@ pub trait Shape: Debug {
 
     fn intersects(&self, ray: Ray) -> Vec<f64> {
         let ray = self.transformation().inverse().unwrap() * ray;
-        self.intersects_object_space(ray)
+        self.local_intersect(ray)
     }
 
     fn normal_at(&self, point: Tuple) -> Tuple {
@@ -66,7 +67,7 @@ mod tests {
             self.id
         }
 
-        fn intersects_object_space(&self, ray: Ray) -> Vec<f64> {
+        fn local_intersect(&self, ray: Ray) -> Vec<f64> {
             vec![ray.origin().x(), ray.origin().y(), ray.origin().z()]
         }
 
