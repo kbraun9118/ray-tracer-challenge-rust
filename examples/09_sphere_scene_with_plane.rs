@@ -4,7 +4,7 @@ use ray_tracer_challenge::{
     camera::Camera,
     color::{Color, Colors},
     error::RayTraceResult,
-    intersection::shape::{material::Material, sphere::Sphere, Shape, plane::Plane},
+    shape::{material::Material, sphere::Sphere, Shape, plane::Plane},
     point_light::PointLight,
     transformation::Transformation,
     tuple::Tuple,
@@ -17,7 +17,7 @@ fn main() -> RayTraceResult<()> {
         .with_specular(0.0);
 
     let mut floor = Plane::new();
-    floor.set_material(wall_material);
+    floor.set_material(wall_material.clone());
 
     let mut back_wall = Plane::new();
     back_wall.set_material(wall_material);
@@ -80,7 +80,7 @@ fn main() -> RayTraceResult<()> {
         Tuple::vector(0.0, 1.0, 0.0),
     ));
 
-    camera.render(&world).save("sphere_scene")?;
+    camera.render(&world).save("sphere_scene_with_planes")?;
 
     Ok(())
 }

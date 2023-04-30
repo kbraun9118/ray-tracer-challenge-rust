@@ -63,7 +63,7 @@ impl Shape for Sphere {
     }
 
     fn material(&self) -> Material {
-        self.material
+        self.material.clone()
     }
 
     fn set_material(&mut self, material: Material) {
@@ -246,7 +246,7 @@ mod tests {
     fn a_spehre_may_be_assigned_a_material() {
         let mut s: Sphere = Sphere::new();
         let m = Material::new().with_ambient(1.0);
-        s.set_material(m);
+        s.set_material(m.clone());
 
         assert_eq!(m, s.material());
     }

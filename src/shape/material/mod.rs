@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     color::{Color, Colors},
     point_light::PointLight,
@@ -5,13 +7,17 @@ use crate::{
     util::eq_f64,
 };
 
-#[derive(Debug, Copy, Clone)]
+use self::pattern::{solid::Solid, Pattern};
+
+pub mod pattern;
+
+#[derive(Debug, Clone)]
 pub struct Material {
-    color: Color,
     ambient: f64,
     diffuse: f64,
     specular: f64,
     shininess: f64,
+    pattern: Rc<dyn Pattern>,
 }
 
 impl Material {
@@ -19,8 +25,8 @@ impl Material {
         Self::default()
     }
 
-    pub fn color(&self) -> Color {
-        self.color
+    pub fn pattern(&self) -> &dyn Pattern {
+        self.pattern.as_ref()
     }
 
     pub fn ambient(&self) -> f64 {
@@ -40,7 +46,7 @@ impl Material {
     }
 
     pub fn with_color(mut self, color: Color) -> Self {
-        self.color = color;
+        self.pattern = Rc::new(Solid::new(color));
         self
     }
 
@@ -61,6 +67,11 @@ impl Material {
 
     pub fn with_shininess(mut self, shininess: f64) -> Self {
         self.shininess = shininess;
+        self
+    }
+
+    pub fn with_pattern<T: Pattern + 'static>(mut self, pattern: T) -> Self {
+        self.pattern = Rc::new(pattern);
         self
     }
 
@@ -93,7 +104,7 @@ impl Material {
         normal_v: Tuple,
         in_shadow: bool,
     ) -> Color {
-        let effective_color = self.color() * light.intensity();
+        let effective_color = self.pattern().color_at(point) * light.intensity();
 
         let light_v = (light.position() - point).normalize();
 
@@ -128,7 +139,7 @@ impl Material {
 impl Default for Material {
     fn default() -> Self {
         Self {
-            color: Colors::White.into(),
+            pattern: Rc::new(Solid::new(Colors::White.into())),
             ambient: 0.1,
             diffuse: 0.9,
             specular: 0.9,
@@ -139,8 +150,7 @@ impl Default for Material {
 
 impl PartialEq for Material {
     fn eq(&self, other: &Self) -> bool {
-        self.color == other.color
-            && eq_f64(self.ambient, other.ambient)
+        eq_f64(self.ambient, other.ambient)
             && eq_f64(self.diffuse, other.diffuse)
             && eq_f64(self.specular, other.specular)
             && eq_f64(self.shininess, other.shininess)
@@ -149,13 +159,16 @@ impl PartialEq for Material {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{pattern::stripes::Stripes, *};
 
     #[test]
     fn the_default_material() {
         let m = Material::new();
 
-        assert_eq!(Color::from(Colors::White), m.color());
+        assert_eq!(
+            Color::from(Colors::White),
+            m.pattern().color_at(Tuple::origin())
+        );
         assert_eq!(0.1, m.ambient());
         assert_eq!(0.9, m.diffuse());
         assert_eq!(0.9, m.specular());
@@ -232,5 +245,22 @@ mod tests {
         let result = m.lighting(light, position, eye_v, normal_v, in_shadow);
 
         assert_eq!(Color::new(0.1, 0.1, 0.1), result);
+    }
+
+    #[test]
+    fn lighting_with_a_pattern_applied() {
+        let material = Material::new()
+            .with_ambient(1.0)
+            .with_diffuse(0.0)
+            .with_specular(0.0)
+            .with_pattern(Stripes::new(Colors::White.into(), Colors::Black.into()));
+        let eye_v = Tuple::vector(0.0, 0.0, -1.0);
+        let normal_v = Tuple::vector(0.0, 0.0, -1.0);
+        let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Colors::White.into());
+        let c1 = material.lighting(light, Tuple::point(0.9, 0.0, 0.0), eye_v, normal_v, false);
+        let c2 = material.lighting(light, Tuple::point(1.0, 0.0, 0.0), eye_v, normal_v, false);
+
+        assert_eq!(c1, Colors::White.into());
+        assert_eq!(c2, Colors::Black.into());
     }
 }

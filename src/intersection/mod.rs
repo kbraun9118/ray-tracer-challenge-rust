@@ -1,13 +1,10 @@
 extern crate self as ray_tracer_challenge;
 use std::{collections::BinaryHeap, ops::Index, rc::Rc};
 
-use crate::util::eq_f64;
+use crate::{shape::Shape, util::eq_f64};
 
-use self::shape::Shape;
-
-pub mod ray;
-pub mod shape;
 pub mod precomputation;
+pub mod ray;
 
 #[derive(Debug, Clone)]
 pub struct Intersection {
@@ -73,9 +70,9 @@ impl IntersectionHeap {
     pub fn hit(&mut self) -> Option<Intersection> {
         while let Some(i) = self.inner.pop() {
             if i.t().is_sign_positive() {
-                return Some(i)
+                return Some(i);
             }
-        } 
+        }
         None
     }
 
@@ -128,10 +125,7 @@ mod tests {
 
     use std::rc::Rc;
 
-    use crate::{
-        intersection::{shape::sphere::Sphere, Intersection},
-        util::eq_f64,
-    };
+    use crate::{intersection::Intersection, shape::sphere::Sphere, util::eq_f64};
 
     #[test]
     fn an_intersection_encapsulates_t_and_object() {

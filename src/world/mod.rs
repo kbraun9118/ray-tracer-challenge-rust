@@ -5,9 +5,9 @@ use crate::{
     intersection::{
         precomputation::PreComputations,
         ray::Ray,
-        shape::{material::Material, sphere::Sphere, Shape},
         IntersectionHeap,
     },
+    shape::{material::Material, sphere::Sphere, Shape},
     point_light::PointLight,
     transformation::Transformation,
     tuple::Tuple,
@@ -244,7 +244,7 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.75), Tuple::vector(0.0, 0.0, -1.0));
 
         let c = w.color_at(r);
-        assert_eq!(c, w.shapes()[1].material().color())
+        assert_eq!(c, w.shapes()[1].material().pattern().color_at(Tuple::origin()))
     }
 
     #[test]

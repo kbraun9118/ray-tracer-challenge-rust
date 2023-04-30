@@ -43,7 +43,7 @@ impl Shape for Plane {
     }
 
     fn material(&self) -> Material {
-        self.material
+        self.material.clone()
     }
 
     fn set_material(&mut self, material: Material) {

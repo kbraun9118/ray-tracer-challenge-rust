@@ -8,4 +8,5 @@ pub mod tuple;
 pub mod point_light;
 pub mod world;
 pub mod camera;
+pub mod shape;
 pub(crate) mod util;
