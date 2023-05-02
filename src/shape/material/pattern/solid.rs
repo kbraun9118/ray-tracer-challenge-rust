@@ -1,15 +1,17 @@
-use crate::color::Color;
+use crate::{color::Color, transformation::Transformation, tuple::Tuple};
 
 use super::Pattern;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Solid {
+#[derive(Debug, Clone)]
+pub struct SolidPattern {
     color: Color,
 }
 
-impl Solid {
+impl SolidPattern {
     pub fn new(color: Color) -> Self {
-        Self { color }
+        Self {
+            color
+        }
     }
 
     pub fn color(&self) -> Color {
@@ -17,8 +19,15 @@ impl Solid {
     }
 }
 
-impl Pattern for Solid {
-    fn color_at(&self, _point: crate::tuple::Tuple) -> Color {
+impl Pattern for SolidPattern {
+    fn color_at(&self, _point: Tuple) -> Color {
         self.color()
+    }
+
+    fn set_transformation(&mut self, _transformation: Transformation) {
+    }
+
+    fn transformation(&self) -> Transformation {
+        Transformation::identity()
     }
 }

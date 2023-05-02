@@ -43,7 +43,7 @@ fn main() -> RayTraceResult<()> {
                 let eye = -r.direction();
                 hit.object()
                     .material()
-                    .lighting(light, point, eye, normal, false)
+                    .lighting(hit.object().as_ref(), light, point, eye, normal, false)
             } else {
                 Colors::Black.into()
             };

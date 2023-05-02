@@ -66,6 +66,7 @@ impl World {
 
         if let Some(light) = self.light {
             comps.object().material().lighting(
+                comps.object().as_ref(),
                 light,
                 comps.over_point(),
                 comps.eye_v(),

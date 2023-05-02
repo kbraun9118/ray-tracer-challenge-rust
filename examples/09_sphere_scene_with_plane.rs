@@ -4,8 +4,16 @@ use ray_tracer_challenge::{
     camera::Camera,
     color::{Color, Colors},
     error::RayTraceResult,
-    shape::{material::Material, sphere::Sphere, Shape, plane::Plane},
     point_light::PointLight,
+    shape::{
+        material::{
+            pattern::{checker::CheckerPattern, gradient::GradientPattern, Pattern, ring::RingPattern},
+            Material,
+        },
+        plane::Plane,
+        sphere::Sphere,
+        Shape,
+    },
     transformation::Transformation,
     tuple::Tuple,
     world::World,
@@ -21,13 +29,20 @@ fn main() -> RayTraceResult<()> {
 
     let mut back_wall = Plane::new();
     back_wall.set_material(wall_material);
-    back_wall.set_transformation(Transformation::identity().rotate_x(PI / 2.0).translation(0.0, 0.0, 5.0));
+    back_wall.set_transformation(
+        Transformation::identity()
+            .rotate_x(PI / 2.0)
+            .translation(0.0, 0.0, 5.0),
+    );
 
     let mut middle = Sphere::new();
+    let mut pattern = RingPattern::new(Colors::Red.into(), Colors::Blue.into());
+    pattern.set_transformation(Transformation::identity().scale(0.25, 0.25, 0.25));
     middle.set_transformation(Transformation::identity().translation(-0.5, 0.0, 0.5));
     middle.set_material(
         Material::new()
-            .with_color(Color::new(0.1, 1.0, 0.5))
+            // .with_color(Color::new(0.1, 1.0, 0.5))
+            .with_pattern(pattern)
             .with_diffuse(0.7)
             .with_specular(0.3),
     );
