@@ -21,7 +21,7 @@ impl RingPattern {
 
 impl Pattern for RingPattern {
     fn color_at(&self, point: Tuple) -> Color {
-        if eq_f64((point.x().powi(2) + point.z().powi(2)).sqrt() % 2.0, 0.0) {
+        if eq_f64((point.x().powi(2) + point.z().powi(2)).sqrt().floor() % 2.0, 0.0) {
             self.color_a
         } else {
             self.color_b

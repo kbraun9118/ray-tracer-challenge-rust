@@ -36,9 +36,9 @@ fn main() -> RayTraceResult<()> {
     );
 
     let mut middle = Sphere::new();
-    let mut pattern = RingPattern::new(Colors::Red.into(), Colors::Blue.into());
-    pattern.set_transformation(Transformation::identity().scale(0.25, 0.25, 0.25));
-    middle.set_transformation(Transformation::identity().translation(-0.5, 0.0, 0.5));
+    let mut pattern = RingPattern::new(Colors::Red.into(), Colors::White.into());
+    pattern.set_transformation(Transformation::identity().scale(0.1, 0.1, 0.1).rotate_x(PI / 2.0));
+    middle.set_transformation(Transformation::identity().translation(-0.5, 1.0, 0.5));
     middle.set_material(
         Material::new()
             .with_pattern(pattern)
