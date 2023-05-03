@@ -7,7 +7,7 @@ use ray_tracer_challenge::{
     point_light::PointLight,
     shape::{
         material::{
-            pattern::{checker::CheckerPattern, gradient::GradientPattern, Pattern, ring::RingPattern},
+            pattern::{Pattern, ring::RingPattern},
             Material,
         },
         plane::Plane,
@@ -41,7 +41,6 @@ fn main() -> RayTraceResult<()> {
     middle.set_transformation(Transformation::identity().translation(-0.5, 0.0, 0.5));
     middle.set_material(
         Material::new()
-            // .with_color(Color::new(0.1, 1.0, 0.5))
             .with_pattern(pattern)
             .with_diffuse(0.7)
             .with_specular(0.3),
