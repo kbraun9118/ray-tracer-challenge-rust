@@ -2,10 +2,8 @@ use ray_tracer_challenge::{
     canvas::Canvas,
     color::Colors,
     error::RayTraceResult,
-    intersection::{
-        ray::Ray,
-        shape::{sphere::Sphere, Shape},
-    },
+    intersection::ray::Ray,
+    shape::{sphere::Sphere, Shape},
     transformation::Transformation,
     tuple::Tuple,
 };

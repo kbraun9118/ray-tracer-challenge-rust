@@ -16,6 +16,7 @@ pub enum Colors {
     Red,
     White,
     Black,
+    Blue,
 }
 
 impl Color {
@@ -47,10 +48,13 @@ impl Color {
 
 impl From<Colors> for Color {
     fn from(value: Colors) -> Self {
+        use Colors::*;
+
         let (red, green, blue) = match value {
-            Colors::Red => (1.0, 0.0, 0.0),
-            Colors::White => (1.0, 1.0, 1.0),
-            Colors::Black => (0.0, 0.0, 0.0),
+            Red => (1.0, 0.0, 0.0),
+            White => (1.0, 1.0, 1.0),
+            Black => (0.0, 0.0, 0.0),
+            Blue => (0.0, 0.0, 1.0)
         };
 
         Self::new(red, green, blue)

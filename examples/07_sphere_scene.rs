@@ -4,7 +4,7 @@ use ray_tracer_challenge::{
     camera::Camera,
     color::{Color, Colors},
     error::RayTraceResult,
-    intersection::shape::{material::Material, sphere::Sphere, Shape},
+    shape::{material::Material, sphere::Sphere, Shape},
     point_light::PointLight,
     transformation::Transformation,
     tuple::Tuple,
@@ -18,7 +18,7 @@ fn main() -> RayTraceResult<()> {
 
     let mut floor = Sphere::new();
     floor.set_transformation(Transformation::identity().scale(10.0, 0.01, 10.0));
-    floor.set_material(wall_material);
+    floor.set_material(wall_material.clone());
 
     let mut left_wall = Sphere::new();
     left_wall.set_transformation(
@@ -28,7 +28,7 @@ fn main() -> RayTraceResult<()> {
             .rotate_y(-PI / 4.0)
             .translation(0.0, 0.0, 5.0),
     );
-    left_wall.set_material(wall_material);
+    left_wall.set_material(wall_material.clone());
 
     let mut right_wall = Sphere::new();
     right_wall.set_transformation(

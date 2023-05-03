@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use crate::tuple::Tuple;
+use crate::{shape::Shape, tuple::Tuple};
 
-use super::{shape::Shape, Intersection, IntersectionHeap};
+use super::{Intersection, IntersectionHeap};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Ray {

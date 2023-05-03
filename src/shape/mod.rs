@@ -6,7 +6,7 @@ use crate::{transformation::Transformation, tuple::Tuple};
 
 use self::material::Material;
 
-use super::ray::Ray;
+use crate::intersection::ray::Ray;
 
 pub mod material;
 pub mod sphere;
@@ -80,7 +80,7 @@ mod tests {
         }
 
         fn material(&self) -> Material {
-            self.material
+            self.material.clone()
         }
 
         fn set_material(&mut self, material: Material) {

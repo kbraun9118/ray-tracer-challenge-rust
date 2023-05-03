@@ -1,12 +1,11 @@
 use crate::{
     intersection::{ray::Ray, Intersection},
+    shape::Shape,
     tuple::Tuple,
     util::EPSILON,
 };
 
 use std::rc::Rc;
-
-use super::shape::Shape;
 
 #[derive(Debug, Clone)]
 pub struct PreComputations {
@@ -74,7 +73,7 @@ impl PreComputations {
 #[cfg(test)]
 mod tests {
 
-    use crate::{intersection::shape::sphere::Sphere, transformation::Transformation};
+    use crate::{shape::sphere::Sphere, transformation::Transformation};
 
     use super::*;
 

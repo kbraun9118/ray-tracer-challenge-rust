@@ -4,11 +4,9 @@ use ray_tracer_challenge::{
     canvas::Canvas,
     color::{Color, Colors},
     error::RayTraceResult,
-    intersection::{
-        ray::Ray,
-        shape::{material::Material, sphere::Sphere, Shape},
-    },
+    intersection::ray::Ray,
     point_light::PointLight,
+    shape::{material::Material, sphere::Sphere, Shape},
     transformation::Transformation,
     tuple::Tuple,
 };
@@ -43,7 +41,9 @@ fn main() -> RayTraceResult<()> {
                 let point = r.position(hit.t());
                 let normal = hit.object().normal_at(point);
                 let eye = -r.direction();
-                hit.object().material().lighting(light, point, eye, normal, false)
+                hit.object()
+                    .material()
+                    .lighting(hit.object().as_ref(), light, point, eye, normal, false)
             } else {
                 Colors::Black.into()
             };
