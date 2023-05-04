@@ -84,7 +84,8 @@ fn main() -> RayTraceResult<()> {
     ));
 
     // smaller resolution, faster rendering
-    let mut camera = Camera::new(200, 150, PI / 3.0);
+    // let mut camera = Camera::new(200, 150, PI / 3.0);
+    let mut camera = Camera::new(1000, 750, PI / 3.0);
 
     // larger resolution, slower rendering
     // let mut camera = Camera::new(1200, 600, PI / 3.0);
