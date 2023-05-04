@@ -1,4 +1,5 @@
 extern crate self as ray_tracer_challenge;
+
 use std::{collections::BinaryHeap, ops::Index, rc::Rc};
 
 use crate::{shape::Shape, util::eq_f64};
@@ -28,7 +29,8 @@ impl Intersection {
 
 impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
-        eq_f64(self.t(), other.t())
+        self.object.as_ref() == other.object.as_ref() &&
+            eq_f64(self.t(), other.t())
     }
 }
 
@@ -71,7 +73,7 @@ impl IntersectionHeap {
         for i in 0..self.len() {
             let i = &self[i];
             if i.t.is_sign_positive() {
-                return Some(i.clone())
+                return Some(i.clone());
             }
         }
         None
@@ -107,7 +109,7 @@ impl Index<usize> for IntersectionHeap {
 }
 
 impl FromIterator<Intersection> for IntersectionHeap {
-    fn from_iter<T: IntoIterator<Item = Intersection>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item=Intersection>>(iter: T) -> Self {
         let mut heap = IntersectionHeap::new();
         for i in iter {
             heap.push(i);
@@ -132,11 +134,11 @@ macro_rules! intersections {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::rc::Rc;
 
     use crate::{intersection::Intersection, shape::sphere::Sphere, util::eq_f64};
+
+    use super::*;
 
     #[test]
     fn an_intersection_encapsulates_t_and_object() {

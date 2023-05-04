@@ -1,11 +1,11 @@
+use std::rc::Rc;
+
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{Intersection, ray::Ray},
     shape::Shape,
     tuple::Tuple,
     util::EPSILON,
 };
-
-use std::rc::Rc;
 
 use super::IntersectionHeap;
 
@@ -48,13 +48,15 @@ impl PreComputations {
                         n1 = 1.0
                     }
                 }
+            }
 
-                if containers.iter().any(|c| c.id() == i.object().id()) {
-                    containers.retain(|c| c.id() != i.object().id());
-                } else {
-                    containers.push(i.object().clone());
-                }
+            if containers.iter().any(|c| c.id() == i.object().id()) {
+                containers.retain(|c| c.id() != i.object().id());
+            } else {
+                containers.push(i.object().clone());
+            }
 
+            if let Some(hit) = xs.hit() {
                 if i == &hit {
                     if let Some(last) = containers.last() {
                         n2 = last.material().refractive_index()
@@ -125,7 +127,6 @@ impl PreComputations {
 
 #[cfg(test)]
 mod tests {
-
     use std::vec;
 
     use crate::{
@@ -223,9 +224,9 @@ mod tests {
             (5.25, c.clone()),
             (6.0, a.clone()),
         ]
-        .into_iter()
-        .map(|(t, obj)| Intersection::new(t, obj))
-        .collect::<IntersectionHeap>();
+            .into_iter()
+            .map(|(t, obj)| Intersection::new(t, obj))
+            .collect::<IntersectionHeap>();
 
         let ns = vec![
             (1.0, 1.5),
