@@ -132,6 +132,11 @@ impl World {
 
         color * comps.object().material().reflective()
     }
+
+    fn refracted_color(&self, comps: PreComputations, arg: f64) -> Color {
+        if eq_f64(comps.object().material().transparency(), 0.0);
+        0.0 == 1.0
+    }
 }
 
 impl Default for World {
@@ -158,7 +163,7 @@ impl Default for World {
 
 #[cfg(test)]
 mod tests {
-    use crate::{intersection::Intersection, shape::plane::Plane};
+    use crate::{intersection::Intersection, shape::plane::Plane, intersections};
 
     use super::*;
 
@@ -410,8 +415,15 @@ mod tests {
         assert_eq!(color, Colors::Black.into());
     }
 
-    // #[test]
-    // fn the_refracted_color_with_an_opaque_surface() {
-    //     le
-    // }
+    #[test]
+    fn the_refracted_color_with_an_opaque_surface() {
+        let w = World::default();
+        let shape = w.shapes()[0].clone();
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = intersections!(Intersection::new(4.0, shape.clone()), Intersection::new(6.0, shape.clone()));
+        let comps = PreComputations::new(xs[0].clone(), r, &xs);
+        let c = w.refracted_color(comps, 5.0);
+
+        assert_eq!(c, Colors::Black.into());
+    }
 }
