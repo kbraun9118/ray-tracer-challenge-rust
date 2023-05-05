@@ -122,6 +122,7 @@ impl FromIterator<Intersection> for IntersectionHeap {
 macro_rules! intersections {
     ( $( $x:expr ),* ) => {
         {
+            extern crate self as ray_tracer_challenge;
             use ray_tracer_challenge::intersection::IntersectionHeap;
             let mut temp_inter = IntersectionHeap::new();
             $(

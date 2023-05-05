@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    intersection::{Intersection, ray::Ray},
+    intersection::{ray::Ray, Intersection},
     shape::Shape,
     tuple::Tuple,
     util::EPSILON,
@@ -15,6 +15,7 @@ pub struct PreComputations {
     object: Rc<dyn Shape>,
     point: Tuple,
     over_point: Tuple,
+    under_point: Tuple,
     eye_v: Tuple,
     normal_v: Tuple,
     reflect_v: Tuple,
@@ -40,13 +41,11 @@ impl PreComputations {
         let mut containers: Vec<Rc<dyn Shape>> = vec![];
 
         for i in xs.iter() {
-            if let Some(hit) = xs.hit() {
-                if i == &hit {
-                    if let Some(last) = containers.last() {
-                        n1 = last.material().refractive_index()
-                    } else {
-                        n1 = 1.0
-                    }
+            if i == &intersection {
+                if let Some(last) = containers.last() {
+                    n1 = last.material().refractive_index()
+                } else {
+                    n1 = 1.0
                 }
             }
 
@@ -56,25 +55,22 @@ impl PreComputations {
                 containers.push(i.object().clone());
             }
 
-            if let Some(hit) = xs.hit() {
-                if i == &hit {
-                    if let Some(last) = containers.last() {
-                        n2 = last.material().refractive_index()
-                    } else {
-                        n2 = 1.0
-                    }
-                    break;
+            if i == &intersection {
+                if let Some(last) = containers.last() {
+                    n2 = last.material().refractive_index()
+                } else {
+                    n2 = 1.0
                 }
+                break;
             }
         }
-
-        dbg!((n1, n2));
 
         Self {
             t: intersection.t(),
             object: intersection.object().clone(),
             point,
             over_point: point + normal_v * EPSILON,
+            under_point: point - normal_v * EPSILON,
             eye_v,
             normal_v,
             reflect_v: ray.direction().reflect(normal_v),
@@ -123,6 +119,10 @@ impl PreComputations {
     pub fn inside(&self) -> bool {
         self.inside
     }
+
+    pub fn under_point(&self) -> Tuple {
+        self.under_point
+    }
 }
 
 #[cfg(test)]
@@ -131,7 +131,7 @@ mod tests {
 
     use crate::{
         shape::{material::Material, plane::Plane, sphere::Sphere},
-        transformation::Transformation,
+        transformation::Transformation, intersections,
     };
 
     use super::*;
@@ -224,9 +224,9 @@ mod tests {
             (5.25, c.clone()),
             (6.0, a.clone()),
         ]
-            .into_iter()
-            .map(|(t, obj)| Intersection::new(t, obj))
-            .collect::<IntersectionHeap>();
+        .into_iter()
+        .map(|(t, obj)| Intersection::new(t, obj))
+        .collect::<IntersectionHeap>();
 
         let ns = vec![
             (1.0, 1.5),
@@ -238,12 +238,25 @@ mod tests {
         ];
 
         for (i, (n1, n2)) in ns.into_iter().enumerate() {
-            dbg!(i);
             let intersection = xs[i].clone();
-            dbg!(xs[i].t());
             let comps = PreComputations::new(intersection, r, &mut xs);
             assert_eq!(n1, comps.n1());
             assert_eq!(n2, comps.n2());
         }
+    }
+
+    #[test]
+    fn the_under_point_is_offset_below_the_surface() {
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let mut shape = Sphere::glassy();
+        shape.set_transformation(Transformation::identity().translation(0.0, 0.0, 1.0));
+        let shape = Rc::new(shape);
+
+        let i = Intersection::new(5.0, shape);
+        let xs = intersections!(i.clone());
+        let comps = PreComputations::new(i, r, &xs);
+
+        assert!(comps.under_point().z() > EPSILON / 2.0);
+        assert!(comps.point().z() < comps.under_point().z());
     }
 }
