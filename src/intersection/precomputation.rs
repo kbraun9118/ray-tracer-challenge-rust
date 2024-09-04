@@ -10,7 +10,7 @@ use crate::{
 use super::IntersectionHeap;
 
 #[derive(Debug, Clone)]
-pub struct PreComputations {
+pub struct PrepComputations {
     t: f64,
     object: Rc<dyn Shape>,
     point: Tuple,
@@ -24,7 +24,7 @@ pub struct PreComputations {
     inside: bool,
 }
 
-impl PreComputations {
+impl PrepComputations {
     pub fn new(intersection: Intersection, ray: Ray, xs: &IntersectionHeap) -> Self {
         let point = ray.position(intersection.t());
         let mut normal_v = intersection.object().normal_at(point);
@@ -130,8 +130,9 @@ mod tests {
     use std::vec;
 
     use crate::{
+        intersections,
         shape::{material::Material, plane::Plane, sphere::Sphere},
-        transformation::Transformation, intersections,
+        transformation::Transformation,
     };
 
     use super::*;
@@ -142,7 +143,7 @@ mod tests {
         let s = Rc::new(Sphere::new());
         let i = Intersection::new(4.0, s.clone());
 
-        let comps = PreComputations::new(i.clone(), r, &mut IntersectionHeap::new());
+        let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert_eq!(i.t(), comps.t());
         assert_eq!(i.object().as_ref(), comps.object().as_ref());
@@ -158,7 +159,7 @@ mod tests {
         let s = Rc::new(Sphere::new());
         let i = Intersection::new(1.0, s.clone());
 
-        let comps = PreComputations::new(i.clone(), r, &mut IntersectionHeap::new());
+        let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert_eq!(i.t(), comps.t());
         assert_eq!(i.object().as_ref(), comps.object().as_ref());
@@ -175,7 +176,7 @@ mod tests {
         s.set_transformation(Transformation::identity().translation(0.0, 0.0, 1.0));
 
         let i = Intersection::new(5.0, Rc::new(s));
-        let comps = PreComputations::new(i.clone(), r, &mut IntersectionHeap::new());
+        let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert!(comps.over_point().z() < -EPSILON / 2.0);
         assert!(comps.point().z() > comps.over_point().z());
@@ -190,7 +191,7 @@ mod tests {
         );
         let i = Intersection::new(2f64.sqrt(), shape.clone());
 
-        let comps = PreComputations::new(i, r, &mut IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &mut IntersectionHeap::new());
 
         assert_eq!(
             Tuple::vector(0.0, 2f64.sqrt() / 2.0, 2f64.sqrt() / 2.0),
@@ -239,7 +240,7 @@ mod tests {
 
         for (i, (n1, n2)) in ns.into_iter().enumerate() {
             let intersection = xs[i].clone();
-            let comps = PreComputations::new(intersection, r, &mut xs);
+            let comps = PrepComputations::new(intersection, r, &mut xs);
             assert_eq!(n1, comps.n1());
             assert_eq!(n2, comps.n2());
         }
@@ -254,7 +255,7 @@ mod tests {
 
         let i = Intersection::new(5.0, shape);
         let xs = intersections!(i.clone());
-        let comps = PreComputations::new(i, r, &xs);
+        let comps = PrepComputations::new(i, r, &xs);
 
         assert!(comps.under_point().z() > EPSILON / 2.0);
         assert!(comps.point().z() < comps.under_point().z());

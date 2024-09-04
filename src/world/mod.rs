@@ -2,7 +2,7 @@ use std::{rc::Rc, vec};
 
 use crate::{
     color::{Color, Colors},
-    intersection::{precomputation::PreComputations, ray::Ray, IntersectionHeap},
+    intersection::{precomputation::PrepComputations, ray::Ray, IntersectionHeap},
     point_light::PointLight,
     shape::{material::Material, sphere::Sphere, Shape},
     transformation::Transformation,
@@ -58,11 +58,11 @@ impl World {
         heap
     }
 
-    pub fn shade_hit(&self, comps: &PreComputations) -> Color {
+    pub fn shade_hit(&self, comps: &PrepComputations) -> Color {
         self.shade_hit_recursive(comps, 5)
     }
 
-    pub fn shade_hit_recursive(&self, comps: &PreComputations, remaining: usize) -> Color {
+    pub fn shade_hit_recursive(&self, comps: &PrepComputations, remaining: usize) -> Color {
         let shadowed = self.is_shadowed(comps.over_point());
 
         if let Some(light) = self.light {
@@ -91,7 +91,7 @@ impl World {
         let intersections = self.intersects(ray);
 
         if let Some(hit) = intersections.hit() {
-            let comps = PreComputations::new(hit, ray.clone(), &intersections);
+            let comps = PrepComputations::new(hit, ray.clone(), &intersections);
             self.shade_hit_recursive(&comps, remaining)
         } else {
             Colors::Black.into()
@@ -118,11 +118,11 @@ impl World {
         }
     }
 
-    fn reflected_color(&self, comps: &PreComputations) -> Color {
+    fn reflected_color(&self, comps: &PrepComputations) -> Color {
         self.reflected_color_recursive(comps, 5)
     }
 
-    fn reflected_color_recursive(&self, comps: &PreComputations, remaining: usize) -> Color {
+    fn reflected_color_recursive(&self, comps: &PrepComputations, remaining: usize) -> Color {
         if remaining <= 0 || eq_f64(comps.object().material().reflective(), 0.0) {
             return Colors::Black.into();
         }
@@ -133,9 +133,23 @@ impl World {
         color * comps.object().material().reflective()
     }
 
-    fn refracted_color(&self, comps: PreComputations, arg: f64) -> Color {
-        if eq_f64(comps.object().material().transparency(), 0.0);
-        0.0 == 1.0
+    fn refracted_color(&self, comps: PrepComputations, remaining: usize) -> Color {
+        if remaining == 0 || eq_f64(comps.object().material().transparency(), 0.0) {
+            return Colors::Black.into();
+        }
+        let n_ratio = comps.n1() / comps.n2();
+        let cos_i = comps.eye_v() * comps.normal_v();
+        let sin2_t = n_ratio.powi(2) * (1.0 - cos_i.powi(2));
+
+        if sin2_t > 1.0 {
+            return Colors::Black.into();
+        }
+
+        let cos_t = (1.0 - sin2_t).sqrt();
+        let direction = comps.normal_v() * (n_ratio * cos_i - cos_t) - comps.eye_v() * n_ratio;
+        let refract_ray = Ray::new(comps.under_point(), direction);
+        self.color_at_recursive(refract_ray, remaining - 1)
+            * comps.object().material().transparency()
     }
 }
 
@@ -163,7 +177,12 @@ impl Default for World {
 
 #[cfg(test)]
 mod tests {
-    use crate::{intersection::Intersection, shape::plane::Plane, intersections};
+
+    use crate::{
+        intersection::Intersection,
+        intersections,
+        shape::{material::pattern::TestPattern, plane::Plane},
+    };
 
     use super::*;
 
@@ -219,7 +238,7 @@ mod tests {
         let shape = w.shapes()[0].clone();
         let i = Intersection::new(4.0, shape);
 
-        let comps = PreComputations::new(i, r, &IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
 
         let c = w.shade_hit(&comps);
 
@@ -237,7 +256,7 @@ mod tests {
         let shape = w.shapes()[1].clone();
         let i = Intersection::new(0.5, shape);
 
-        let comps = PreComputations::new(i, r, &IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
 
         let c = w.shade_hit(&comps);
 
@@ -331,7 +350,7 @@ mod tests {
 
         let i = Intersection::new(4.0, w.shapes()[1].clone());
 
-        let comps = PreComputations::new(i, r, &IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
         let c = w.shade_hit(&comps);
 
         assert_eq!(Color::new(0.1, 0.1, 0.1), c);
@@ -345,7 +364,7 @@ mod tests {
             .unwrap()
             .set_material(Material::new().with_ambient(1.0));
         let i = Intersection::new(1.0, w.shapes()[1].clone());
-        let comps = PreComputations::new(i, r, &IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
         let color = w.reflected_color(&comps);
 
         assert_eq!(color, Colors::Black.into());
@@ -365,7 +384,7 @@ mod tests {
             Tuple::vector(0.0, -2f64.sqrt() / 2.0, 2f64.sqrt() / 2.0),
         );
         let i = Intersection::new(2f64.sqrt(), shape);
-        let comps = PreComputations::new(i, r, &IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
         let color = w.reflected_color(&comps);
 
         assert_eq!(Color::new(0.19033, 0.23791, 0.14274), color);
@@ -409,7 +428,7 @@ mod tests {
             Tuple::vector(0.0, -2f64.sqrt() / 2.0, 2f64.sqrt() / 2.0),
         );
         let i = Intersection::new(2f64.sqrt(), shape);
-        let comps = PreComputations::new(i, r, &IntersectionHeap::new());
+        let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
         let color = w.reflected_color_recursive(&comps, 0);
 
         assert_eq!(color, Colors::Black.into());
@@ -420,10 +439,91 @@ mod tests {
         let w = World::default();
         let shape = w.shapes()[0].clone();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = intersections!(Intersection::new(4.0, shape.clone()), Intersection::new(6.0, shape.clone()));
-        let comps = PreComputations::new(xs[0].clone(), r, &xs);
-        let c = w.refracted_color(comps, 5.0);
+        let xs = intersections!(
+            Intersection::new(4.0, shape.clone()),
+            Intersection::new(6.0, shape.clone())
+        );
+        let comps = PrepComputations::new(xs[0].clone(), r, &xs);
+        let c = w.refracted_color(comps, 5);
 
         assert_eq!(c, Colors::Black.into());
+    }
+
+    #[test]
+    fn the_refracted_color_at_the_maximum_recursive_depth() {
+        let mut w = World::default();
+        let shape = w.shapes_mut().get_mut(0).unwrap();
+
+        Rc::get_mut(shape).unwrap().set_material(
+            Material::default()
+                .with_transparency(1.0)
+                .with_reflective(1.5),
+        );
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = intersections!(
+            Intersection::new(4.0, shape.clone()),
+            Intersection::new(6.0, shape.clone())
+        );
+        let comps = PrepComputations::new(xs[0].clone(), r, &xs);
+        let c = w.refracted_color(comps, 0);
+
+        assert_eq!(c, Colors::Black.into());
+    }
+
+    #[test]
+    fn the_refracted_color_under_total_internal_reflection() {
+        let mut w = World::default();
+        let shape = w.shapes_mut().get_mut(0).unwrap();
+        Rc::get_mut(shape).unwrap().set_material(
+            Material::default()
+                .with_transparency(1.0)
+                .with_refractive_index(1.5),
+        );
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, 2f64.sqrt() / 2.0),
+            Tuple::vector(0.0, 1.0, 0.0),
+        );
+        let xs = intersections!(
+            Intersection::new(-(2f64.sqrt()) / 2.0, shape.clone()),
+            Intersection::new(2f64.sqrt() / 2.0, shape.clone())
+        );
+        let comps = PrepComputations::new(xs[1].clone(), r, &xs);
+        let c = w.refracted_color(comps, 5);
+
+        assert_eq!(c, Colors::Black.into());
+    }
+
+    #[test]
+    fn the_refracted_color_with_a_refracted_ray() {
+        let mut w = World::default();
+        Rc::get_mut(w.shapes_mut().get_mut(0).unwrap())
+            .unwrap()
+            .set_material(
+                Material::new()
+                    .with_ambient(1.0)
+                    .with_pattern(TestPattern::default()),
+            );
+        Rc::get_mut(w.shapes_mut().get_mut(1).unwrap())
+            .unwrap()
+            .set_material(
+                Material::new()
+                    .with_transparency(1.0)
+                    .with_refractive_index(1.5),
+            );
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.1), Tuple::vector(0.0, 1.0, 0.0));
+        let a = w.shapes().get(0).unwrap();
+        let b = w.shapes().get(1).unwrap();
+        let xs = intersections!(
+            Intersection::new(-0.9899, a.clone()),
+            Intersection::new(-0.4899, b.clone()),
+            Intersection::new(0.4899, b.clone()),
+            Intersection::new(0.9899, a.clone())
+        );
+
+        let comps = PrepComputations::new(xs[2].clone(), r, &xs);
+        let c = w.refracted_color(comps, 5);
+        assert_eq!(c, Color::new(0.0, 0.9988745506795582, 0.04721898034382347));
     }
 }

@@ -1,11 +1,11 @@
 use crate::{color::Color, shape::Shape, transformation::Transformation, tuple::Tuple};
 use std::fmt::Debug;
 
-pub mod solid;
-pub mod stripes;
+pub mod checker;
 pub mod gradient;
 pub mod ring;
-pub mod checker;
+pub mod solid;
+pub mod stripes;
 
 pub trait Pattern: Debug {
     fn color_at(&self, point: Tuple) -> Color;
@@ -19,34 +19,38 @@ pub trait Pattern: Debug {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Default)]
+pub(crate) struct TestPattern {
+    transformation: Transformation,
+}
+
+impl Pattern for TestPattern {
+    fn color_at(&self, point: Tuple) -> Color {
+        Color::new(point.x(), point.y(), point.z())
+    }
+
+    fn set_transformation(&mut self, transformation: Transformation) {
+        self.transformation = transformation;
+    }
+
+    fn transformation(&self) -> Transformation {
+        self.transformation.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::shape::sphere::Sphere;
 
     use super::*;
 
-    #[derive(Debug, Default)]
-    struct TestPattern {
-        transformation: Transformation,
-    }
-
-    impl Pattern for TestPattern {
-        fn color_at(&self, point: Tuple) -> Color {
-            Color::new(point.x(), point.y(), point.z())
-        }
-
-        fn set_transformation(&mut self, transformation: Transformation) {
-            self.transformation = transformation;
-        }
-
-        fn transformation(&self) -> Transformation {
-            self.transformation.clone()
-        }
-    }
-
     #[test]
     fn the_default_pattern_tranformation() {
-        assert_eq!(TestPattern::default().transformation(), Transformation::identity())
+        assert_eq!(
+            TestPattern::default().transformation(),
+            Transformation::identity()
+        )
     }
 
     #[test]
@@ -54,7 +58,10 @@ mod tests {
         let mut pattern = TestPattern::default();
         pattern.set_transformation(Transformation::identity().translation(1.0, 2.0, 3.0));
 
-        assert_eq!(pattern.transformation(), Transformation::identity().translation(1.0, 2.0, 3.0));
+        assert_eq!(
+            pattern.transformation(),
+            Transformation::identity().translation(1.0, 2.0, 3.0)
+        );
     }
 
     #[test]
