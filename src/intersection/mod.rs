@@ -4,7 +4,7 @@ use std::{collections::BinaryHeap, ops::Index, rc::Rc};
 
 use crate::{shape::Shape, util::eq_f64};
 
-pub mod precomputation;
+pub mod prepcomputation;
 pub mod ray;
 
 #[derive(Debug, Clone)]
@@ -29,8 +29,7 @@ impl Intersection {
 
 impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
-        self.object.as_ref() == other.object.as_ref() &&
-            eq_f64(self.t(), other.t())
+        self.object.as_ref() == other.object.as_ref() && eq_f64(self.t(), other.t())
     }
 }
 
@@ -109,7 +108,7 @@ impl Index<usize> for IntersectionHeap {
 }
 
 impl FromIterator<Intersection> for IntersectionHeap {
-    fn from_iter<T: IntoIterator<Item=Intersection>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Intersection>>(iter: T) -> Self {
         let mut heap = IntersectionHeap::new();
         for i in iter {
             heap.push(i);

@@ -123,6 +123,24 @@ impl PrepComputations {
     pub fn under_point(&self) -> Tuple {
         self.under_point
     }
+
+    pub fn schlick(&self) -> f64 {
+        let mut cos = self.eye_v() * self.normal_v();
+
+        if self.n1() > self.n2() {
+            let n = self.n1() / self.n2();
+            let sin2_t = n.powi(2) * (1.0 - cos.powi(2));
+            if sin2_t > 1.0 {
+                return 1.0;
+            }
+
+            let cos_t = (1.0 - sin2_t).sqrt();
+            cos = cos_t;
+        }
+        let r0 = ((self.n1() - self.n2()) / (self.n1() + self.n2())).powi(2);
+
+        r0 + (1.0 - r0) * (1.0 - cos).powi(5)
+    }
 }
 
 #[cfg(test)]
@@ -133,6 +151,7 @@ mod tests {
         intersections,
         shape::{material::Material, plane::Plane, sphere::Sphere},
         transformation::Transformation,
+        util::eq_f64,
     };
 
     use super::*;
@@ -259,5 +278,44 @@ mod tests {
 
         assert!(comps.under_point().z() > EPSILON / 2.0);
         assert!(comps.point().z() < comps.under_point().z());
+    }
+
+    #[test]
+    fn the_schlick_approximation_under_total_internal_reflection() {
+        let shape = Rc::new(Sphere::glassy());
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, 2f64.sqrt() / 2.0),
+            Tuple::vector(0.0, 1.0, 0.0),
+        );
+        let xs = intersections!(
+            Intersection::new(-(2f64.sqrt()) / 2.0, shape.clone()),
+            Intersection::new(2f64.sqrt() / 2.0, shape.clone())
+        );
+        let comps = PrepComputations::new(xs[1].clone(), r, &xs);
+        let reflectance = comps.schlick();
+        assert!(eq_f64(reflectance, 1.0));
+    }
+
+    #[test]
+    fn the_schlick_approximation_with_a_perpendicular_viewing_angle() {
+        let shape = Rc::new(Sphere::glassy());
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
+        let xs = intersections!(
+            Intersection::new(-1.0, shape.clone()),
+            Intersection::new(1.0, shape.clone())
+        );
+        let comps = PrepComputations::new(xs[1].clone(), r, &xs);
+        let reflectance = comps.schlick();
+        assert!(eq_f64(reflectance, 0.04));
+    }
+
+    #[test]
+    fn the_schlick_approximation_with_small_angle_and_n2_gt_n1() {
+        let shape = Rc::new(Sphere::glassy());
+        let r = Ray::new(Tuple::point(0.0, 0.99, -2.0), Tuple::vector(0.0, 0.0, 1.0));
+        let xs = intersections!(Intersection::new(1.8589, shape.clone()));
+        let comps = PrepComputations::new(xs[0].clone(), r, &xs);
+        let reflectance = comps.schlick();
+        assert!(eq_f64(reflectance, 0.48873));
     }
 }
