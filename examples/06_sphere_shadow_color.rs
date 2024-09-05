@@ -35,7 +35,7 @@ fn main() -> RayTraceResult<()> {
                 Tuple::vector(-200.0 + x as f64, -200.0 + y as f64, 500.0).normalize(),
             );
 
-            let mut intersections = r.intersections(sphere.clone());
+            let intersections = r.intersections(sphere.clone());
 
             c[(x, y)] = if let Some(hit) = intersections.hit() {
                 let point = r.position(hit.t());

@@ -19,6 +19,9 @@ pub struct Material {
     diffuse: f64,
     specular: f64,
     shininess: f64,
+    reflective: f64,
+    transparency: f64,
+    refractive_index: f64,
     pattern: Rc<dyn Pattern>,
 }
 
@@ -47,6 +50,18 @@ impl Material {
         self.shininess
     }
 
+    pub fn reflective(&self) -> f64 {
+        self.reflective
+    }
+
+    pub fn transparency(&self) -> f64 {
+        self.transparency
+    }
+
+    pub fn refractive_index(&self) -> f64 {
+        self.refractive_index
+    }
+
     pub fn with_color(mut self, color: Color) -> Self {
         self.pattern = Rc::new(SolidPattern::new(color));
         self
@@ -69,6 +84,21 @@ impl Material {
 
     pub fn with_shininess(mut self, shininess: f64) -> Self {
         self.shininess = shininess;
+        self
+    }
+
+    pub fn with_reflective(mut self, reflective: f64) -> Self {
+        self.reflective = reflective;
+        self
+    }
+
+    pub fn with_transparency(mut self, transparency: f64) -> Self {
+        self.transparency = transparency;
+        self
+    }
+
+    pub fn with_refractive_index(mut self, refractive_index: f64) -> Self {
+        self.refractive_index = refractive_index;
         self
     }
 
@@ -147,6 +177,9 @@ impl Default for Material {
             diffuse: 0.9,
             specular: 0.9,
             shininess: 200.0,
+            reflective: 0.0,
+            transparency: 0.0,
+            refractive_index: 1.0,
         }
     }
 }
@@ -178,6 +211,9 @@ mod tests {
         assert_eq!(0.9, m.diffuse());
         assert_eq!(0.9, m.specular());
         assert_eq!(200.0, m.shininess());
+        assert_eq!(0.0, m.reflective());
+        assert_eq!(0.0, m.transparency());
+        assert_eq!(1.0, m.refractive_index());
     }
 
     #[test]

@@ -1,9 +1,10 @@
 extern crate self as ray_tracer_challenge;
+
 use std::{collections::BinaryHeap, ops::Index, rc::Rc};
 
 use crate::{shape::Shape, util::eq_f64};
 
-pub mod precomputation;
+pub mod prepcomputation;
 pub mod ray;
 
 #[derive(Debug, Clone)]
@@ -28,7 +29,7 @@ impl Intersection {
 
 impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
-        eq_f64(self.t(), other.t())
+        self.object.as_ref() == other.object.as_ref() && eq_f64(self.t(), other.t())
     }
 }
 
@@ -67,10 +68,11 @@ impl IntersectionHeap {
         self.inner.push(i);
     }
 
-    pub fn hit(&mut self) -> Option<Intersection> {
-        while let Some(i) = self.inner.pop() {
-            if i.t().is_sign_positive() {
-                return Some(i);
+    pub fn hit(&self) -> Option<Intersection> {
+        for i in 0..self.len() {
+            let i = &self[i];
+            if i.t.is_sign_positive() {
+                return Some(i.clone());
             }
         }
         None
@@ -105,10 +107,21 @@ impl Index<usize> for IntersectionHeap {
     }
 }
 
+impl FromIterator<Intersection> for IntersectionHeap {
+    fn from_iter<T: IntoIterator<Item = Intersection>>(iter: T) -> Self {
+        let mut heap = IntersectionHeap::new();
+        for i in iter {
+            heap.push(i);
+        }
+        heap
+    }
+}
+
 #[macro_export]
 macro_rules! intersections {
     ( $( $x:expr ),* ) => {
         {
+            extern crate self as ray_tracer_challenge;
             use ray_tracer_challenge::intersection::IntersectionHeap;
             let mut temp_inter = IntersectionHeap::new();
             $(
@@ -121,11 +134,11 @@ macro_rules! intersections {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::rc::Rc;
 
     use crate::{intersection::Intersection, shape::sphere::Sphere, util::eq_f64};
+
+    use super::*;
 
     #[test]
     fn an_intersection_encapsulates_t_and_object() {
@@ -155,7 +168,7 @@ mod tests {
         let i1 = Intersection::new(1.0, s.clone());
         let i2 = Intersection::new(2.0, s.clone());
 
-        let mut xs = intersections![i1.clone(), i2];
+        let xs = intersections![i1.clone(), i2];
 
         let hit = xs.hit();
 
@@ -169,7 +182,7 @@ mod tests {
         let i1 = Intersection::new(-1.0, s.clone());
         let i2 = Intersection::new(1.0, s.clone());
 
-        let mut xs = intersections![i1, i2.clone()];
+        let xs = intersections![i1, i2.clone()];
 
         let hit = xs.hit();
 
@@ -183,7 +196,7 @@ mod tests {
         let i1 = Intersection::new(-2.0, s.clone());
         let i2 = Intersection::new(-1.0, s.clone());
 
-        let mut xs = intersections![i1, i2];
+        let xs = intersections![i1, i2];
 
         let hit = xs.hit();
 
@@ -198,7 +211,7 @@ mod tests {
         let i3 = Intersection::new(-3.0, s.clone());
         let i4 = Intersection::new(2.0, s);
 
-        let mut xs = intersections![i1, i2, i3, i4.clone()];
+        let xs = intersections![i1, i2, i3, i4.clone()];
 
         let hit = xs.hit();
 

@@ -9,7 +9,7 @@ use super::{material::Material, Shape};
 pub struct Sphere {
     id: Uuid,
     center: Tuple,
-    transformation: Option<Transformation>,
+    transformation: Transformation,
     material: Material,
 }
 
@@ -18,8 +18,17 @@ impl Sphere {
         Self {
             id: Uuid::new_v4(),
             center: Tuple::origin(),
-            transformation: None,
+            transformation: Transformation::identity(),
             material: Material::new(),
+        }
+    }
+
+    pub fn glassy() -> Self {
+        Self {
+            material: Material::new()
+                .with_transparency(1.0)
+                .with_refractive_index(1.5),
+            ..Self::new()
         }
     }
 }
@@ -49,13 +58,11 @@ impl Shape for Sphere {
     }
 
     fn transformation(&self) -> Transformation {
-        self.transformation
-            .as_ref()
-            .map_or_else(Transformation::default, |t| t.clone())
+        self.transformation.clone()
     }
 
     fn set_transformation(&mut self, transformation: Transformation) {
-        self.transformation = Some(transformation);
+        self.transformation = transformation;
     }
 
     fn local_normal_at(&self, point: Tuple) -> Tuple {
@@ -249,5 +256,13 @@ mod tests {
         s.set_material(m.clone());
 
         assert_eq!(m, s.material());
+    }
+
+    #[test]
+    fn a_helper_for_producing_a_sphere_with_a_glassy_material() {
+        let s = Sphere::glassy();
+        assert_eq!(Transformation::identity(), s.transformation());
+        assert_eq!(1.0, s.material().transparency());
+        assert_eq!(1.5, s.material().refractive_index());
     }
 }
