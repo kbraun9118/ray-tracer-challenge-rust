@@ -8,9 +8,10 @@ use self::material::Material;
 
 use crate::intersection::ray::Ray;
 
+pub mod cube;
 pub mod material;
-pub mod sphere;
 pub mod plane;
+pub mod sphere;
 
 pub trait Shape: Debug {
     fn id(&self) -> Uuid;
@@ -132,7 +133,7 @@ mod tests {
         let mut shape = TestShape::new();
         shape.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0).clone());
         let xs = shape.intersects(ray);
-        
+
         assert_eq!(xs.len(), 3);
         assert_eq!(xs[0], 0.5);
         assert_eq!(xs[1], 1.0);
@@ -142,7 +143,11 @@ mod tests {
     #[test]
     fn computing_normal_on_translated_shape() {
         let mut shape = TestShape::new();
-        shape.set_transformation(Transformation::identity().translation(0.0, 1.0, 0.0).clone());
+        shape.set_transformation(
+            Transformation::identity()
+                .translation(0.0, 1.0, 0.0)
+                .clone(),
+        );
         let normal = shape.normal_at(Tuple::point(0.0, 1.70711, -0.70711));
 
         assert_eq!(normal, Tuple::vector(0.0, 0.70711, -0.70711));
