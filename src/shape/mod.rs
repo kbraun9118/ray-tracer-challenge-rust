@@ -8,7 +8,9 @@ use self::material::Material;
 
 use crate::intersection::ray::Ray;
 
+pub mod cone;
 pub mod cube;
+pub mod cylinder;
 pub mod material;
 pub mod plane;
 pub mod sphere;
