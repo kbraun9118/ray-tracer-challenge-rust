@@ -11,6 +11,7 @@ use crate::intersection::ray::Ray;
 pub mod cone;
 pub mod cube;
 pub mod cylinder;
+pub mod group;
 pub mod material;
 pub mod plane;
 pub mod sphere;
@@ -23,6 +24,8 @@ pub trait Shape: Debug {
     fn material(&self) -> Material;
     fn set_material(&mut self, material: Material);
     fn local_normal_at(&self, point: Tuple) -> Tuple;
+    fn parent(&self) -> Option<*const dyn Shape>;
+    fn set_parent(&mut self, parent: *const dyn Shape);
 
     fn intersects(&self, ray: Ray) -> Vec<f64> {
         let ray = self.transformation().inverse().unwrap() * ray;
@@ -53,6 +56,7 @@ mod tests {
         id: Uuid,
         transformation: Transformation,
         material: Material,
+        parent: Option<*const dyn Shape>,
     }
 
     impl TestShape {
@@ -61,6 +65,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 transformation: Transformation::identity(),
                 material: Material::new(),
+                parent: None,
             }
         }
     }
@@ -94,6 +99,14 @@ mod tests {
             let mut point = point;
             point.as_vector();
             point
+        }
+
+        fn parent(&self) -> Option<*const dyn Shape> {
+            self.parent
+        }
+
+        fn set_parent(&mut self, parent: *const dyn Shape) {
+            self.parent = Some(parent)
         }
     }
 
@@ -153,5 +166,12 @@ mod tests {
         let normal = shape.normal_at(Tuple::point(0.0, 1.70711, -0.70711));
 
         assert_eq!(normal, Tuple::vector(0.0, 0.70711, -0.70711));
+    }
+
+    #[test]
+    fn a_shape_has_a_parent_attribute() {
+        let s = TestShape::new();
+
+        assert!(s.parent().is_none())
     }
 }

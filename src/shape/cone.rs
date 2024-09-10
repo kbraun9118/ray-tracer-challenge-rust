@@ -1,6 +1,14 @@
-use std::mem::swap;
+use std::{
+    mem::swap,
+    rc::{Rc, Weak},
+};
 
-use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple, util::{eq_f64, EPSILON}};
+use crate::{
+    intersection::ray::Ray,
+    transformation::Transformation,
+    tuple::Tuple,
+    util::{eq_f64, EPSILON},
+};
 
 use super::{material::Material, Shape};
 
@@ -12,6 +20,7 @@ pub struct Cone {
     minimum: f64,
     maximum: f64,
     closed: bool,
+    parent: Option<*const dyn Shape>,
 }
 
 fn check_cap(ray: Ray, t: f64, y: f64) -> bool {
@@ -30,6 +39,7 @@ impl Cone {
             minimum: f64::NEG_INFINITY,
             maximum: f64::INFINITY,
             closed: false,
+            parent: None,
         }
     }
 
@@ -71,6 +81,14 @@ impl Cone {
         if check_cap(ray, t, self.maximum) {
             xs.push(t);
         }
+    }
+
+    fn parent(&self) -> Option<*const dyn Shape> {
+        self.parent.clone()
+    }
+
+    fn set_parent(&mut self, parent: *const dyn Shape) {
+        self.parent = Some(parent);
     }
 }
 
@@ -163,6 +181,14 @@ impl Shape for Cone {
             }
             Tuple::vector(point.x(), y, point.z())
         }
+    }
+
+    fn parent(&self) -> Option<*const dyn Shape> {
+        self.parent
+    }
+
+    fn set_parent(&mut self, parent: *const dyn Shape) {
+        self.parent = Some(parent)
     }
 }
 

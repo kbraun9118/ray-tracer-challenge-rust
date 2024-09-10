@@ -1,4 +1,8 @@
-use std::{f64::INFINITY, mem::swap};
+use std::{
+    f64::INFINITY,
+    mem::swap,
+    rc::{Rc, Weak},
+};
 
 use crate::{
     intersection::ray::Ray,
@@ -14,6 +18,7 @@ pub struct Cube {
     id: uuid::Uuid,
     transformation: Transformation,
     material: Material,
+    parent: Option<*const dyn Shape>,
 }
 
 impl Cube {
@@ -22,6 +27,7 @@ impl Cube {
             id: uuid::Uuid::new_v4(),
             transformation: Transformation::default(),
             material: Material::default(),
+            parent: None,
         }
     }
 }
@@ -89,6 +95,14 @@ impl Shape for Cube {
         } else {
             Tuple::vector(0.0, 0.0, point.z())
         }
+    }
+
+    fn parent(&self) -> Option<*const dyn Shape> {
+        self.parent
+    }
+
+    fn set_parent(&mut self, parent: *const dyn Shape) {
+        self.parent = Some(parent);
     }
 }
 

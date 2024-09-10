@@ -1,3 +1,5 @@
+use std::rc::{Rc, Weak};
+
 use uuid::Uuid;
 
 use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple, util::EPSILON};
@@ -9,6 +11,7 @@ pub struct Plane {
     id: Uuid,
     material: Material,
     transformation: Transformation,
+    parent: Option<*const dyn Shape>,
 }
 
 impl Plane {
@@ -17,6 +20,7 @@ impl Plane {
             id: Uuid::new_v4(),
             material: Material::new(),
             transformation: Transformation::identity(),
+            parent: None,
         }
     }
 }
@@ -52,6 +56,14 @@ impl Shape for Plane {
 
     fn local_normal_at(&self, _point: Tuple) -> Tuple {
         Tuple::vector(0.0, 1.0, 0.0)
+    }
+
+    fn parent(&self) -> Option<*const dyn Shape> {
+        self.parent.clone()
+    }
+
+    fn set_parent(&mut self, parent: *const dyn Shape) {
+        self.parent = Some(parent);
     }
 }
 

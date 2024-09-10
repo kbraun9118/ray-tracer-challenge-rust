@@ -1,4 +1,7 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    rc::{Rc, Weak},
+};
 
 use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple};
 use uuid::Uuid;
@@ -11,6 +14,7 @@ pub struct Sphere {
     center: Tuple,
     transformation: Transformation,
     material: Material,
+    parent: Option<*const dyn Shape>,
 }
 
 impl Sphere {
@@ -20,6 +24,7 @@ impl Sphere {
             center: Tuple::origin(),
             transformation: Transformation::identity(),
             material: Material::new(),
+            parent: None,
         }
     }
 
@@ -75,6 +80,14 @@ impl Shape for Sphere {
 
     fn set_material(&mut self, material: Material) {
         self.material = material;
+    }
+
+    fn parent(&self) -> Option<*const dyn Shape> {
+        self.parent.clone()
+    }
+
+    fn set_parent(&mut self, parent: *const dyn Shape) {
+        self.parent = Some(parent);
     }
 }
 

@@ -1,5 +1,8 @@
 use core::f64;
-use std::mem::swap;
+use std::{
+    mem::swap,
+    rc::{Rc, Weak},
+};
 
 use crate::{
     intersection::ray::Ray,
@@ -10,7 +13,6 @@ use crate::{
 
 use super::{material::Material, Shape};
 
-
 #[derive(Debug)]
 pub struct Cylinder {
     id: uuid::Uuid,
@@ -19,6 +21,7 @@ pub struct Cylinder {
     minimum: f64,
     maximum: f64,
     closed: bool,
+    parent: Option<*const dyn Shape>,
 }
 
 fn check_cap(ray: Ray, t: f64) -> bool {
@@ -37,6 +40,7 @@ impl Cylinder {
             minimum: f64::NEG_INFINITY,
             maximum: f64::INFINITY,
             closed: false,
+            parent: None,
         }
     }
 
@@ -154,6 +158,14 @@ impl Shape for Cylinder {
         } else {
             Tuple::vector(point.x(), 0.0, point.z())
         }
+    }
+
+    fn parent(&self) -> Option<*const dyn Shape> {
+        self.parent.clone()
+    }
+
+    fn set_parent(&mut self, parent: *const dyn Shape) {
+        self.parent = Some(parent);
     }
 }
 
