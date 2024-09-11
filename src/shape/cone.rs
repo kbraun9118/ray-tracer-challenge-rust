@@ -1,7 +1,4 @@
-use std::{
-    mem::swap,
-    rc::{Rc, Weak},
-};
+use std::mem::swap;
 
 use crate::{
     intersection::ray::Ray,
@@ -10,7 +7,7 @@ use crate::{
     util::{eq_f64, EPSILON},
 };
 
-use super::{material::Material, Shape};
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Cone {
@@ -20,7 +17,7 @@ pub struct Cone {
     minimum: f64,
     maximum: f64,
     closed: bool,
-    parent: Option<*const dyn Shape>,
+    parent: Option<*mut dyn Shape>,
 }
 
 fn check_cap(ray: Ray, t: f64, y: f64) -> bool {
@@ -81,14 +78,6 @@ impl Cone {
         if check_cap(ray, t, self.maximum) {
             xs.push(t);
         }
-    }
-
-    fn parent(&self) -> Option<*const dyn Shape> {
-        self.parent.clone()
-    }
-
-    fn set_parent(&mut self, parent: *const dyn Shape) {
-        self.parent = Some(parent);
     }
 }
 
@@ -183,12 +172,26 @@ impl Shape for Cone {
         }
     }
 
-    fn parent(&self) -> Option<*const dyn Shape> {
+    fn parent(&self) -> Option<*mut dyn Shape> {
         self.parent
     }
 
-    fn set_parent(&mut self, parent: *const dyn Shape) {
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
         self.parent = Some(parent)
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        let a = self.minimum.abs();
+        let b = self.maximum.abs();
+        let limit = if a.is_infinite() || b.is_infinite() {
+            f64::INFINITY
+        } else {
+            a.max(b)
+        };
+        BoundedBox::new(
+            Tuple::point(-limit, self.minimum, -limit),
+            Tuple::point(limit, self.maximum, limit),
+        )
     }
 }
 

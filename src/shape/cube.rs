@@ -1,8 +1,4 @@
-use std::{
-    f64::INFINITY,
-    mem::swap,
-    rc::{Rc, Weak},
-};
+use std::{f64::INFINITY, mem::swap};
 
 use crate::{
     intersection::ray::Ray,
@@ -11,14 +7,14 @@ use crate::{
     util::{self, eq_f64},
 };
 
-use super::{material::Material, Shape};
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Cube {
     id: uuid::Uuid,
     transformation: Transformation,
     material: Material,
-    parent: Option<*const dyn Shape>,
+    parent: Option<*mut dyn Shape>,
 }
 
 impl Cube {
@@ -97,12 +93,16 @@ impl Shape for Cube {
         }
     }
 
-    fn parent(&self) -> Option<*const dyn Shape> {
+    fn parent(&self) -> Option<*mut dyn Shape> {
         self.parent
     }
 
-    fn set_parent(&mut self, parent: *const dyn Shape) {
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
         self.parent = Some(parent);
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        BoundedBox::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
     }
 }
 

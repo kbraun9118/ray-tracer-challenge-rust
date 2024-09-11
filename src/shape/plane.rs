@@ -1,17 +1,17 @@
-use std::rc::{Rc, Weak};
+use core::f64;
 
 use uuid::Uuid;
 
 use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple, util::EPSILON};
 
-use super::{material::Material, Shape};
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Plane {
     id: Uuid,
     material: Material,
     transformation: Transformation,
-    parent: Option<*const dyn Shape>,
+    parent: Option<*mut dyn Shape>,
 }
 
 impl Plane {
@@ -58,12 +58,19 @@ impl Shape for Plane {
         Tuple::vector(0.0, 1.0, 0.0)
     }
 
-    fn parent(&self) -> Option<*const dyn Shape> {
+    fn parent(&self) -> Option<*mut dyn Shape> {
         self.parent.clone()
     }
 
-    fn set_parent(&mut self, parent: *const dyn Shape) {
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
         self.parent = Some(parent);
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        BoundedBox::new(
+            Tuple::point(f64::NEG_INFINITY, 0.0, f64::NEG_INFINITY),
+            Tuple::point(f64::INFINITY, 0.0, f64::INFINITY),
+        )
     }
 }
 
