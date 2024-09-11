@@ -11,9 +11,22 @@ use crate::intersection::ray::Ray;
 pub mod cone;
 pub mod cube;
 pub mod cylinder;
+pub mod group;
 pub mod material;
 pub mod plane;
 pub mod sphere;
+
+#[derive(Debug)]
+pub struct BoundedBox {
+    _min: Tuple,
+    _max: Tuple,
+}
+
+impl BoundedBox {
+    fn new(min: Tuple, max: Tuple) -> Self {
+        Self { _min: min, _max: max }
+    }
+}
 
 pub trait Shape: Debug {
     fn id(&self) -> Uuid;
@@ -23,6 +36,9 @@ pub trait Shape: Debug {
     fn material(&self) -> Material;
     fn set_material(&mut self, material: Material);
     fn local_normal_at(&self, point: Tuple) -> Tuple;
+    fn parent(&self) -> Option<*mut dyn Shape>;
+    fn set_parent(&mut self, parent: *mut dyn Shape);
+    fn bounds(&self) -> BoundedBox;
 
     fn intersects(&self, ray: Ray) -> Vec<f64> {
         let ray = self.transformation().inverse().unwrap() * ray;
@@ -30,11 +46,48 @@ pub trait Shape: Debug {
     }
 
     fn normal_at(&self, point: Tuple) -> Tuple {
-        let object_point = self.transformation().inverse().unwrap() * point;
-        let object_normal = self.local_normal_at(object_point);
-        let mut world_normal = self.transformation().inverse().unwrap().transpose() * object_normal;
-        world_normal.as_vector();
-        world_normal.normalize()
+        let local_point = self.world_to_object(point);
+        let local_normal = self.local_normal_at(local_point);
+        self.normal_to_world(local_normal)
+    }
+
+    fn world_to_object(&self, point: Tuple) -> Tuple {
+        let mut point = point;
+        if let Some(parent) = self.parent() {
+            point = unsafe {
+                parent
+                    .as_ref()
+                    .expect("Could not get parent")
+                    .world_to_object(point)
+            };
+        }
+
+        self.transformation()
+            .inverse()
+            .expect("Could not get inverse")
+            * point
+    }
+
+    fn normal_to_world(&self, normal: Tuple) -> Tuple {
+        let mut normal = self
+            .transformation()
+            .inverse()
+            .expect("Could not find inverse")
+            .transpose()
+            * normal;
+        normal.as_vector();
+        let mut normal = normal.normalize();
+
+        if let Some(parent) = self.parent() {
+            normal = unsafe {
+                parent
+                    .as_ref()
+                    .expect("Could not get parent")
+                    .normal_to_world(normal)
+            };
+        }
+
+        normal
     }
 }
 
@@ -46,6 +99,11 @@ impl PartialEq for &dyn Shape {
 
 #[cfg(test)]
 mod tests {
+    use core::f64;
+
+    use group::Group;
+    use sphere::Sphere;
+
     use super::*;
 
     #[derive(Debug)]
@@ -53,6 +111,7 @@ mod tests {
         id: Uuid,
         transformation: Transformation,
         material: Material,
+        parent: Option<*mut dyn Shape>,
     }
 
     impl TestShape {
@@ -61,6 +120,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 transformation: Transformation::identity(),
                 material: Material::new(),
+                parent: None,
             }
         }
     }
@@ -94,6 +154,18 @@ mod tests {
             let mut point = point;
             point.as_vector();
             point
+        }
+
+        fn parent(&self) -> Option<*mut dyn Shape> {
+            self.parent
+        }
+
+        fn set_parent(&mut self, parent: *mut dyn Shape) {
+            self.parent = Some(parent)
+        }
+
+        fn bounds(&self) -> BoundedBox {
+            BoundedBox::new(Tuple::origin(), Tuple::origin())
         }
     }
 
@@ -153,5 +225,64 @@ mod tests {
         let normal = shape.normal_at(Tuple::point(0.0, 1.70711, -0.70711));
 
         assert_eq!(normal, Tuple::vector(0.0, 0.70711, -0.70711));
+    }
+
+    #[test]
+    fn a_shape_has_a_parent_attribute() {
+        let s = TestShape::new();
+
+        assert!(s.parent().is_none())
+    }
+
+    #[test]
+    fn converting_a_point_from_world_to_object_space() {
+        let mut g1 = Group::new();
+        g1.set_transformation(Transformation::identity().rotate_y(f64::consts::PI / 2.0));
+        let mut g2 = Group::new();
+        g2.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
+        g1.add_child(&mut g2);
+        let mut s = Sphere::new();
+        s.set_transformation(Transformation::identity().translation(5.0, 0.0, 0.0));
+        g2.add_child(&mut s);
+
+        let p = s.world_to_object(Tuple::point(-2.0, 0.0, -10.0));
+
+        assert_eq!(p, Tuple::point(0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    fn converting_a_normal_from_object_to_world_space() {
+        let mut g1 = Group::new();
+        g1.set_transformation(Transformation::identity().rotate_y(f64::consts::PI / 2.0));
+        let mut g2 = Group::new();
+        g2.set_transformation(Transformation::identity().scale(1.0, 2.0, 3.0));
+        g1.add_child(&mut g2);
+        let mut s = Sphere::new();
+        s.set_transformation(Transformation::identity().translation(5.0, 0.0, 0.0));
+        g2.add_child(&mut s);
+
+        let n = s.normal_to_world(Tuple::vector(
+            3f64.sqrt() / 3.0,
+            3f64.sqrt() / 3.0,
+            3f64.sqrt() / 3.0,
+        ));
+
+        assert_eq!(n, Tuple::vector(0.28571, 0.42857, -0.85714));
+    }
+
+    #[test]
+    fn finding_the_normal_on_a_child_object() {
+        let mut g1 = Group::new();
+        g1.set_transformation(Transformation::identity().rotate_y(f64::consts::PI / 2.0));
+        let mut g2 = Group::new();
+        g2.set_transformation(Transformation::identity().scale(1.0, 2.0, 3.0));
+        g1.add_child(&mut g2);
+        let mut s = Sphere::new();
+        s.set_transformation(Transformation::identity().translation(5.0, 0.0, 0.0));
+        g2.add_child(&mut s);
+
+        let n = s.normal_at(Tuple::point(1.7321, 1.1547, -5.5774));
+
+        assert_eq!(n, Tuple::vector(0.28570, 0.42854, -0.85716));
     }
 }

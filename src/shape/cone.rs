@@ -1,8 +1,13 @@
 use std::mem::swap;
 
-use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple, util::{eq_f64, EPSILON}};
+use crate::{
+    intersection::ray::Ray,
+    transformation::Transformation,
+    tuple::Tuple,
+    util::{eq_f64, EPSILON},
+};
 
-use super::{material::Material, Shape};
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Cone {
@@ -12,6 +17,7 @@ pub struct Cone {
     minimum: f64,
     maximum: f64,
     closed: bool,
+    parent: Option<*mut dyn Shape>,
 }
 
 fn check_cap(ray: Ray, t: f64, y: f64) -> bool {
@@ -30,6 +36,7 @@ impl Cone {
             minimum: f64::NEG_INFINITY,
             maximum: f64::INFINITY,
             closed: false,
+            parent: None,
         }
     }
 
@@ -163,6 +170,28 @@ impl Shape for Cone {
             }
             Tuple::vector(point.x(), y, point.z())
         }
+    }
+
+    fn parent(&self) -> Option<*mut dyn Shape> {
+        self.parent
+    }
+
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
+        self.parent = Some(parent)
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        let a = self.minimum.abs();
+        let b = self.maximum.abs();
+        let limit = if a.is_infinite() || b.is_infinite() {
+            f64::INFINITY
+        } else {
+            a.max(b)
+        };
+        BoundedBox::new(
+            Tuple::point(-limit, self.minimum, -limit),
+            Tuple::point(limit, self.maximum, limit),
+        )
     }
 }
 

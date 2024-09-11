@@ -1,9 +1,7 @@
-use std::fmt::Debug;
-
 use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple};
 use uuid::Uuid;
 
-use super::{material::Material, Shape};
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Sphere {
@@ -11,6 +9,7 @@ pub struct Sphere {
     center: Tuple,
     transformation: Transformation,
     material: Material,
+    parent: Option<*mut dyn Shape>,
 }
 
 impl Sphere {
@@ -20,6 +19,7 @@ impl Sphere {
             center: Tuple::origin(),
             transformation: Transformation::identity(),
             material: Material::new(),
+            parent: None,
         }
     }
 
@@ -34,6 +34,10 @@ impl Sphere {
 }
 
 impl Shape for Sphere {
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
     fn local_intersect(&self, ray: Ray) -> Vec<f64> {
         let sphere_to_ray = ray.origin() - self.center;
 
@@ -53,10 +57,6 @@ impl Shape for Sphere {
         }
     }
 
-    fn id(&self) -> Uuid {
-        self.id
-    }
-
     fn transformation(&self) -> Transformation {
         self.transformation.clone()
     }
@@ -65,16 +65,28 @@ impl Shape for Sphere {
         self.transformation = transformation;
     }
 
-    fn local_normal_at(&self, point: Tuple) -> Tuple {
-        point - Tuple::origin()
-    }
-
     fn material(&self) -> Material {
         self.material.clone()
     }
 
     fn set_material(&mut self, material: Material) {
         self.material = material;
+    }
+
+    fn local_normal_at(&self, point: Tuple) -> Tuple {
+        point - Tuple::origin()
+    }
+
+    fn parent(&self) -> Option<*mut dyn Shape> {
+        self.parent.clone()
+    }
+
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
+        self.parent = Some(parent);
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        BoundedBox::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
     }
 }
 

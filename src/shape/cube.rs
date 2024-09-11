@@ -7,13 +7,14 @@ use crate::{
     util::{self, eq_f64},
 };
 
-use super::{material::Material, Shape};
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Cube {
     id: uuid::Uuid,
     transformation: Transformation,
     material: Material,
+    parent: Option<*mut dyn Shape>,
 }
 
 impl Cube {
@@ -22,6 +23,7 @@ impl Cube {
             id: uuid::Uuid::new_v4(),
             transformation: Transformation::default(),
             material: Material::default(),
+            parent: None,
         }
     }
 }
@@ -89,6 +91,18 @@ impl Shape for Cube {
         } else {
             Tuple::vector(0.0, 0.0, point.z())
         }
+    }
+
+    fn parent(&self) -> Option<*mut dyn Shape> {
+        self.parent
+    }
+
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
+        self.parent = Some(parent);
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        BoundedBox::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
     }
 }
 

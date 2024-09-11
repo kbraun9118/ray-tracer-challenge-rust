@@ -1,4 +1,3 @@
-use core::f64;
 use std::mem::swap;
 
 use crate::{
@@ -8,8 +7,7 @@ use crate::{
     util::{eq_f64, EPSILON},
 };
 
-use super::{material::Material, Shape};
-
+use super::{material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Cylinder {
@@ -19,6 +17,7 @@ pub struct Cylinder {
     minimum: f64,
     maximum: f64,
     closed: bool,
+    parent: Option<*mut dyn Shape>,
 }
 
 fn check_cap(ray: Ray, t: f64) -> bool {
@@ -37,6 +36,7 @@ impl Cylinder {
             minimum: f64::NEG_INFINITY,
             maximum: f64::INFINITY,
             closed: false,
+            parent: None,
         }
     }
 
@@ -154,6 +154,21 @@ impl Shape for Cylinder {
         } else {
             Tuple::vector(point.x(), 0.0, point.z())
         }
+    }
+
+    fn parent(&self) -> Option<*mut dyn Shape> {
+        self.parent.clone()
+    }
+
+    fn set_parent(&mut self, parent: *mut dyn Shape) {
+        self.parent = Some(parent);
+    }
+
+    fn bounds(&self) -> BoundedBox {
+        BoundedBox::new(
+            Tuple::point(-1.0, self.minimum, -1.0),
+            Tuple::point(1.0, self.maximum, 1.0),
+        )
     }
 }
 
