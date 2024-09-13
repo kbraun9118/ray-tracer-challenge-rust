@@ -1,7 +1,11 @@
-use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple};
+use crate::{
+    intersection::{ray::Ray, Intersection},
+    transformation::Transformation,
+    tuple::Tuple,
+};
 use uuid::Uuid;
 
-use super::{material::Material, BoundedBox, Shape};
+use super::{group::WeakGroupContainer, material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Sphere {
@@ -9,7 +13,7 @@ pub struct Sphere {
     center: Tuple,
     transformation: Transformation,
     material: Material,
-    parent: Option<*mut dyn Shape>,
+    parent: Option<WeakGroupContainer>,
 }
 
 impl Sphere {
@@ -38,7 +42,7 @@ impl Shape for Sphere {
         self.id
     }
 
-    fn local_intersect(&self, ray: Ray) -> Vec<f64> {
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
         let sphere_to_ray = ray.origin() - self.center;
 
         let a = ray.direction() * ray.direction();
@@ -51,8 +55,8 @@ impl Shape for Sphere {
             vec![]
         } else {
             vec![
-                (-b - discriminant.sqrt()) / (2.0 * a),
-                (-b + discriminant.sqrt()) / (2.0 * a),
+                Intersection::new((-b - discriminant.sqrt()) / (2.0 * a), self.id),
+                Intersection::new((-b + discriminant.sqrt()) / (2.0 * a), self.id),
             ]
         }
     }
@@ -65,23 +69,31 @@ impl Shape for Sphere {
         self.transformation = transformation;
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self, id: Uuid) -> Option<Material> {
+        if self.id == id {
+            Some(self.material.clone())
+        } else {
+            None
+        }
     }
 
     fn set_material(&mut self, material: Material) {
         self.material = material;
     }
 
-    fn local_normal_at(&self, point: Tuple) -> Tuple {
-        point - Tuple::origin()
+    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+        if id == self.id {
+            Some(point - Tuple::origin())
+        } else {
+            None
+        }
     }
 
-    fn parent(&self) -> Option<*mut dyn Shape> {
+    fn parent(&self) -> Option<WeakGroupContainer> {
         self.parent.clone()
     }
 
-    fn set_parent(&mut self, parent: *mut dyn Shape) {
+    fn set_parent(&mut self, parent: WeakGroupContainer) {
         self.parent = Some(parent);
     }
 
@@ -112,8 +124,8 @@ mod tests {
         let xs = s.intersects(r);
 
         assert_eq!(2, xs.len());
-        assert_eq!(4.0, xs[0]);
-        assert_eq!(6.0, xs[1]);
+        assert_eq!(4.0, xs[0].t());
+        assert_eq!(6.0, xs[1].t());
     }
 
     #[test]
@@ -124,8 +136,8 @@ mod tests {
         let xs = s.intersects(r);
 
         assert_eq!(2, xs.len());
-        assert_eq!(5.0, xs[0]);
-        assert_eq!(5.0, xs[1]);
+        assert_eq!(5.0, xs[0].t());
+        assert_eq!(5.0, xs[1].t());
     }
 
     #[test]
@@ -146,8 +158,8 @@ mod tests {
         let xs = s.intersects(r);
 
         assert_eq!(2, xs.len());
-        assert_eq!(-1.0, xs[0]);
-        assert_eq!(1.0, xs[1]);
+        assert_eq!(-1.0, xs[0].t());
+        assert_eq!(1.0, xs[1].t());
     }
 
     #[test]
@@ -158,8 +170,8 @@ mod tests {
         let xs = s.intersects(r);
 
         assert_eq!(2, xs.len());
-        assert_eq!(-6.0, xs[0]);
-        assert_eq!(-4.0, xs[1]);
+        assert_eq!(-6.0, xs[0].t());
+        assert_eq!(-4.0, xs[1].t());
     }
 
     #[test]
@@ -172,8 +184,8 @@ mod tests {
         let xs = s.intersects(r);
 
         assert_eq!(2, xs.len());
-        assert_eq!(3.0, xs[0]);
-        assert_eq!(7.0, xs[1]);
+        assert_eq!(3.0, xs[0].t());
+        assert_eq!(7.0, xs[1].t());
     }
 
     #[test]
@@ -191,7 +203,7 @@ mod tests {
     #[test]
     fn the_normal_on_a_sphere_at_a_point_on_the_x_axis() {
         let s = Sphere::new();
-        let n = s.normal_at(Tuple::point(1.0, 0.0, 0.0));
+        let n = s.normal_at(s.id(), Tuple::point(1.0, 0.0, 0.0)).unwrap();
 
         assert_eq!(Tuple::vector(1.0, 0.0, 0.0), n);
     }
@@ -199,7 +211,7 @@ mod tests {
     #[test]
     fn the_normal_on_a_sphere_at_a_point_on_the_y_axis() {
         let s = Sphere::new();
-        let n = s.normal_at(Tuple::point(0.0, 1.0, 0.0));
+        let n = s.normal_at(s.id(), Tuple::point(0.0, 1.0, 0.0)).unwrap();
 
         assert_eq!(Tuple::vector(0.0, 1.0, 0.0), n);
     }
@@ -207,7 +219,7 @@ mod tests {
     #[test]
     fn the_normal_on_a_sphere_at_a_point_on_the_z_axis() {
         let s = Sphere::new();
-        let n = s.normal_at(Tuple::point(0.0, 0.0, 1.0));
+        let n = s.normal_at(s.id(), Tuple::point(0.0, 0.0, 1.0)).unwrap();
 
         assert_eq!(Tuple::vector(0.0, 0.0, 1.0), n);
     }
@@ -215,11 +227,16 @@ mod tests {
     #[test]
     fn the_normal_on_a_sphere_at_a_nonaxial_point() {
         let s = Sphere::new();
-        let n = s.normal_at(Tuple::point(
-            3.0f64.sqrt() / 3.0,
-            3.0f64.sqrt() / 3.0,
-            3.0f64.sqrt() / 3.0,
-        ));
+        let n = s
+            .normal_at(
+                s.id(),
+                Tuple::point(
+                    3.0f64.sqrt() / 3.0,
+                    3.0f64.sqrt() / 3.0,
+                    3.0f64.sqrt() / 3.0,
+                ),
+            )
+            .unwrap();
 
         assert_eq!(
             Tuple::vector(
@@ -235,7 +252,9 @@ mod tests {
     fn computing_the_normal_on_a_translated_sphere() {
         let s = Sphere::from(Transformation::identity().translation(0.0, 1.0, 0.0));
 
-        let n = s.normal_at(Tuple::point(0.0, 1.70711, -0.70711));
+        let n = s
+            .normal_at(s.id(), Tuple::point(0.0, 1.70711, -0.70711))
+            .unwrap();
 
         assert_eq!(Tuple::vector(0.0, 0.70711, -0.70711), n);
     }
@@ -248,7 +267,12 @@ mod tests {
                 .scale(1.0, 0.5, 1.0),
         );
 
-        let n = s.normal_at(Tuple::point(0.0, 2.0f64.sqrt() / 2.0, -2f64.sqrt() / 2.0));
+        let n = s
+            .normal_at(
+                s.id(),
+                Tuple::point(0.0, 2.0f64.sqrt() / 2.0, -2f64.sqrt() / 2.0),
+            )
+            .unwrap();
 
         assert_eq!(Tuple::vector(0.0, 0.97014, -0.24254), n);
     }
@@ -256,9 +280,9 @@ mod tests {
     #[test]
     fn a_sphere_has_a_default_material() {
         let s = Sphere::new();
-        let m = s.material();
+        let m = s.material(s.id());
 
-        assert_eq!(Material::new(), m);
+        assert_eq!(Material::new(), m.unwrap());
     }
 
     #[test]
@@ -267,14 +291,14 @@ mod tests {
         let m = Material::new().with_ambient(1.0);
         s.set_material(m.clone());
 
-        assert_eq!(m, s.material());
+        assert_eq!(m, s.material(s.id()).unwrap());
     }
 
     #[test]
     fn a_helper_for_producing_a_sphere_with_a_glassy_material() {
         let s = Sphere::glassy();
         assert_eq!(Transformation::identity(), s.transformation());
-        assert_eq!(1.0, s.material().transparency());
-        assert_eq!(1.5, s.material().refractive_index());
+        assert_eq!(1.0, s.material(s.id()).unwrap().transparency());
+        assert_eq!(1.5, s.material(s.id()).unwrap().refractive_index());
     }
 }

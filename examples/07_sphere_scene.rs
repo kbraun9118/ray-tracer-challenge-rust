@@ -4,8 +4,8 @@ use ray_tracer_challenge::{
     camera::Camera,
     color::{Color, Colors},
     error::RayTraceResult,
-    shape::{material::Material, sphere::Sphere, Shape},
     point_light::PointLight,
+    shape::{material::Material, sphere::Sphere, Shape},
     transformation::Transformation,
     tuple::Tuple,
     world::World,
@@ -76,12 +76,12 @@ fn main() -> RayTraceResult<()> {
     );
 
     let mut world = World::new();
-    world.add_shape(floor);
-    world.add_shape(left_wall);
-    world.add_shape(right_wall);
-    world.add_shape(middle);
-    world.add_shape(right);
-    world.add_shape(left);
+    world.add_shape(floor.into());
+    world.add_shape(left_wall.into());
+    world.add_shape(right_wall.into());
+    world.add_shape(middle.into());
+    world.add_shape(right.into());
+    world.add_shape(left.into());
     world.set_light(PointLight::new(
         Tuple::point(-10.0, 10.0, -10.0),
         Colors::White.into(),

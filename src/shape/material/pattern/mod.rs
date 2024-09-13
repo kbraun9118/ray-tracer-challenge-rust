@@ -1,4 +1,4 @@
-use crate::{color::Color, shape::Shape, transformation::Transformation, tuple::Tuple};
+use crate::{color::Color, shape::ShapeContainer, transformation::Transformation, tuple::Tuple};
 use std::fmt::Debug;
 
 pub mod checker;
@@ -12,8 +12,8 @@ pub trait Pattern: Debug {
     fn set_transformation(&mut self, transformation: Transformation);
     fn transformation(&self) -> Transformation;
 
-    fn color_at_object(&self, shape: &dyn Shape, point: Tuple) -> Color {
-        let object_point = shape.transformation().inverse().unwrap() * point;
+    fn color_at_object(&self, shape: ShapeContainer, point: Tuple) -> Color {
+        let object_point = shape.borrow().transformation().inverse().unwrap() * point;
         let pattern_point = self.transformation().inverse().unwrap() * object_point;
         self.color_at(pattern_point)
     }
@@ -41,7 +41,7 @@ impl Pattern for TestPattern {
 
 #[cfg(test)]
 mod tests {
-    use crate::shape::sphere::Sphere;
+    use crate::shape::{sphere::Sphere, Shape};
 
     use super::*;
 
@@ -69,7 +69,7 @@ mod tests {
         let mut object = Sphere::new();
         object.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
         let pattern = TestPattern::default();
-        let c = pattern.color_at_object(&object, Tuple::point(2.0, 3.0, 4.0));
+        let c = pattern.color_at_object(object.into(), Tuple::point(2.0, 3.0, 4.0));
 
         assert_eq!(c, Color::new(1.0, 1.5, 2.0));
     }
@@ -79,7 +79,7 @@ mod tests {
         let object = Sphere::new();
         let mut pattern = TestPattern::default();
         pattern.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
-        let c = pattern.color_at_object(&object, Tuple::point(2.0, 3.0, 4.0));
+        let c = pattern.color_at_object(object.into(), Tuple::point(2.0, 3.0, 4.0));
 
         assert_eq!(c, Color::new(1.0, 1.5, 2.0));
     }
@@ -90,7 +90,7 @@ mod tests {
         object.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
         let mut pattern = TestPattern::default();
         pattern.set_transformation(Transformation::identity().translation(0.5, 1.0, 1.5));
-        let c = pattern.color_at_object(&object, Tuple::point(2.5, 3.0, 3.5));
+        let c = pattern.color_at_object(object.into(), Tuple::point(2.5, 3.0, 3.5));
 
         assert_eq!(c, Color::new(0.75, 0.5, 0.25));
     }

@@ -2,16 +2,21 @@ use core::f64;
 
 use uuid::Uuid;
 
-use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple, util::EPSILON};
+use crate::{
+    intersection::{ray::Ray, Intersection},
+    transformation::Transformation,
+    tuple::Tuple,
+    util::EPSILON,
+};
 
-use super::{material::Material, BoundedBox, Shape};
+use super::{group::WeakGroupContainer, material::Material, BoundedBox, Shape};
 
 #[derive(Debug)]
 pub struct Plane {
     id: Uuid,
     material: Material,
     transformation: Transformation,
-    parent: Option<*mut dyn Shape>,
+    parent: Option<WeakGroupContainer>,
 }
 
 impl Plane {
@@ -30,11 +35,14 @@ impl Shape for Plane {
         self.id
     }
 
-    fn local_intersect(&self, ray: Ray) -> Vec<f64> {
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
         if ray.direction().y().abs() < EPSILON {
             vec![]
         } else {
-            vec![-ray.origin().y() / ray.direction().y()]
+            vec![Intersection::new(
+                -ray.origin().y() / ray.direction().y(),
+                self.id,
+            )]
         }
     }
 
@@ -46,23 +54,31 @@ impl Shape for Plane {
         self.transformation = transformation;
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self, id: Uuid) -> Option<Material> {
+        if self.id == id {
+            Some(self.material.clone())
+        } else {
+            None
+        }
     }
 
     fn set_material(&mut self, material: Material) {
         self.material = material;
     }
 
-    fn local_normal_at(&self, _point: Tuple) -> Tuple {
-        Tuple::vector(0.0, 1.0, 0.0)
+    fn local_normal_at(&self, id: Uuid, _point: Tuple) -> Option<Tuple> {
+        if self.id == id {
+            Some(Tuple::vector(0.0, 1.0, 0.0))
+        } else {
+            None
+        }
     }
 
-    fn parent(&self) -> Option<*mut dyn Shape> {
+    fn parent(&self) -> Option<WeakGroupContainer> {
         self.parent.clone()
     }
 
-    fn set_parent(&mut self, parent: *mut dyn Shape) {
+    fn set_parent(&mut self, parent: WeakGroupContainer) {
         self.parent = Some(parent);
     }
 
@@ -82,9 +98,15 @@ mod tests {
     #[test]
     fn the_normal_of_a_plane_is_constant_everywhere() {
         let p = Plane::new();
-        let n1 = p.local_normal_at(Tuple::point(0.0, 0.0, 0.0));
-        let n2 = p.local_normal_at(Tuple::point(10.0, 0.0, -10.0));
-        let n3 = p.local_normal_at(Tuple::point(-5.0, 0.0, 150.0));
+        let n1 = p
+            .local_normal_at(p.id(), Tuple::point(0.0, 0.0, 0.0))
+            .unwrap();
+        let n2 = p
+            .local_normal_at(p.id(), Tuple::point(10.0, 0.0, -10.0))
+            .unwrap();
+        let n3 = p
+            .local_normal_at(p.id(), Tuple::point(-5.0, 0.0, 150.0))
+            .unwrap();
 
         assert_eq!(n1, Tuple::vector(0.0, 1.0, 0.0));
         assert_eq!(n2, Tuple::vector(0.0, 1.0, 0.0));
@@ -116,7 +138,7 @@ mod tests {
         let xs = p.local_intersect(r);
 
         assert_eq!(xs.len(), 1);
-        assert_eq!(xs[0], 1.0);
+        assert_eq!(xs[0].t(), 1.0);
     }
 
     #[test]
@@ -126,6 +148,6 @@ mod tests {
         let xs = p.local_intersect(r);
 
         assert_eq!(xs.len(), 1);
-        assert_eq!(xs[0], 1.0);
+        assert_eq!(xs[0].t(), 1.0);
     }
 }

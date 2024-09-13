@@ -77,11 +77,11 @@ fn main() -> RayTraceResult<()> {
     );
 
     let mut world = World::new();
-    world.add_shape(floor);
-    world.add_shape(middle);
-    world.add_shape(right);
-    world.add_shape(left);
-    world.add_shape(back_wall);
+    world.add_shape(floor.into());
+    world.add_shape(middle.into());
+    world.add_shape(right.into());
+    world.add_shape(left.into());
+    world.add_shape(back_wall.into());
     world.set_light(PointLight::new(
         Tuple::point(-10.0, 10.0, -10.0),
         Colors::White.into(),

@@ -1,8 +1,6 @@
-use std::rc::Rc;
+use crate::{shape::ShapeContainer, tuple::Tuple};
 
-use crate::{shape::Shape, tuple::Tuple};
-
-use super::{Intersection, IntersectionHeap};
+use super::{IntersectionHeap, ShapeIntersection};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Ray {
@@ -27,14 +25,10 @@ impl Ray {
         self.origin + (self.direction * position)
     }
 
-    pub fn intersections(&self, shape: Rc<dyn Shape>) -> IntersectionHeap {
+    pub fn intersections(&self, shape: ShapeContainer) -> IntersectionHeap {
         let mut heap = IntersectionHeap::new();
-        for i in shape
-            .intersects(*self)
-            .into_iter()
-            .map(|i| Intersection::new(i, shape.clone()))
-        {
-            heap.push(i);
+        for i in shape.borrow().intersects(*self) {
+            heap.push(ShapeIntersection::new(i.t(), shape.clone(), i.object()));
         }
         heap
     }

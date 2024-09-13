@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{borrow::BorrowMut, rc::Rc};
 
 use crate::{
     color::{Color, Colors},
@@ -9,7 +9,7 @@ use crate::{
 
 use self::pattern::{solid::SolidPattern, Pattern};
 
-use super::Shape;
+use super::ShapeContainer;
 
 pub mod pattern;
 
@@ -130,14 +130,15 @@ impl Material {
     */
     pub fn lighting(
         &self,
-        shape: &dyn Shape,
+        shape: ShapeContainer,
         light: PointLight,
         point: Tuple,
         eye_v: Tuple,
         normal_v: Tuple,
         in_shadow: bool,
     ) -> Color {
-        let effective_color = self.pattern().color_at_object(shape, point) * light.intensity();
+        let effective_color =
+            self.pattern().borrow_mut().color_at_object(shape, point) * light.intensity();
 
         let light_v = (light.position() - point).normalize();
 
@@ -226,7 +227,7 @@ mod tests {
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
         let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Colors::White.into());
 
-        let result = m.lighting(&sphere, light, position, eye_v, normal_v, false);
+        let result = m.lighting(sphere.into(), light, position, eye_v, normal_v, false);
 
         assert_eq!(Color::new(1.9, 1.9, 1.9), result);
     }
@@ -241,7 +242,7 @@ mod tests {
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
         let light = PointLight::new(Tuple::point(0.0, 0.0, -10.0), Colors::White.into());
 
-        let result = m.lighting(&sphere, light, position, eye_v, normal_v, false);
+        let result = m.lighting(sphere.into(), light, position, eye_v, normal_v, false);
 
         assert_eq!(Color::new(1.0, 1.0, 1.0), result);
     }
@@ -256,7 +257,7 @@ mod tests {
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
         let light = PointLight::new(Tuple::point(0.0, 10.0, -10.0), Colors::White.into());
 
-        let result = m.lighting(&sphere, light, position, eye_v, normal_v, false);
+        let result = m.lighting(sphere.into(), light, position, eye_v, normal_v, false);
 
         assert_eq!(Color::new(0.7364, 0.7364, 0.7364), result);
     }
@@ -271,7 +272,7 @@ mod tests {
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
         let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Colors::White.into());
 
-        let result = m.lighting(&sphere, light, position, eye_v, normal_v, false);
+        let result = m.lighting(sphere.into(), light, position, eye_v, normal_v, false);
 
         assert_eq!(Color::new(0.1, 0.1, 0.1), result);
     }
@@ -288,24 +289,41 @@ mod tests {
 
         let in_shadow = true;
 
-        let result = m.lighting(&sphere, light, position, eye_v, normal_v, in_shadow);
+        let result = m.lighting(sphere.into(), light, position, eye_v, normal_v, in_shadow);
 
         assert_eq!(Color::new(0.1, 0.1, 0.1), result);
     }
 
     #[test]
     fn lighting_with_a_pattern_applied() {
-        let sphere = Sphere::new();
+        let sphere = ShapeContainer::from(Sphere::new());
         let material = Material::new()
             .with_ambient(1.0)
             .with_diffuse(0.0)
             .with_specular(0.0)
-            .with_pattern(StripePattern::new(Colors::White.into(), Colors::Black.into()));
+            .with_pattern(StripePattern::new(
+                Colors::White.into(),
+                Colors::Black.into(),
+            ));
         let eye_v = Tuple::vector(0.0, 0.0, -1.0);
         let normal_v = Tuple::vector(0.0, 0.0, -1.0);
         let light = PointLight::new(Tuple::point(0.0, 0.0, 10.0), Colors::White.into());
-        let c1 = material.lighting(&sphere, light, Tuple::point(0.9, 0.0, 0.0), eye_v, normal_v, false);
-        let c2 = material.lighting(&sphere, light, Tuple::point(1.0, 0.0, 0.0), eye_v, normal_v, false);
+        let c1 = material.lighting(
+            sphere.clone(),
+            light,
+            Tuple::point(0.9, 0.0, 0.0),
+            eye_v,
+            normal_v,
+            false,
+        );
+        let c2 = material.lighting(
+            sphere,
+            light,
+            Tuple::point(1.0, 0.0, 0.0),
+            eye_v,
+            normal_v,
+            false,
+        );
 
         assert_eq!(c1, Colors::White.into());
         assert_eq!(c2, Colors::Black.into());

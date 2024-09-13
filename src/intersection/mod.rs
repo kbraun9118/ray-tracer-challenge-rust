@@ -1,8 +1,10 @@
 extern crate self as ray_tracer_challenge;
 
-use std::{collections::BinaryHeap, ops::Index, rc::Rc};
+use std::{collections::BinaryHeap, ops::Index};
 
-use crate::{shape::Shape, util::eq_f64};
+use uuid::Uuid;
+
+use crate::{shape::ShapeContainer, util::eq_f64};
 
 pub mod prepcomputation;
 pub mod ray;
@@ -10,11 +12,11 @@ pub mod ray;
 #[derive(Debug, Clone)]
 pub struct Intersection {
     t: f64,
-    object: Rc<dyn Shape>,
+    object: uuid::Uuid,
 }
 
 impl Intersection {
-    pub fn new(t: f64, object: Rc<dyn Shape>) -> Self {
+    pub fn new(t: f64, object: uuid::Uuid) -> Self {
         Self { t, object }
     }
 
@@ -22,14 +24,14 @@ impl Intersection {
         self.t
     }
 
-    pub fn object(&self) -> &Rc<dyn Shape> {
-        &self.object
+    pub fn object(&self) -> uuid::Uuid {
+        self.object.clone()
     }
 }
 
 impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
-        self.object.as_ref() == other.object.as_ref() && eq_f64(self.t(), other.t())
+        self.object == other.object && eq_f64(self.t(), other.t())
     }
 }
 
@@ -52,9 +54,63 @@ impl Ord for Intersection {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ShapeIntersection {
+    t: f64,
+    object: ShapeContainer,
+    object_id: Uuid,
+}
+
+impl ShapeIntersection {
+    pub fn new(t: f64, object: ShapeContainer, object_id: Uuid) -> Self {
+        Self {
+            t,
+            object,
+            object_id,
+        }
+    }
+
+    pub fn t(&self) -> f64 {
+        self.t
+    }
+
+    pub fn object(&self) -> ShapeContainer {
+        self.object.clone()
+    }
+
+    pub fn object_id(&self) -> Uuid {
+        self.object_id
+    }
+}
+
+impl PartialEq for ShapeIntersection {
+    fn eq(&self, other: &Self) -> bool {
+        self.object.id() == other.object.id() && eq_f64(self.t(), other.t())
+    }
+}
+
+impl Eq for ShapeIntersection {}
+
+impl PartialOrd for ShapeIntersection {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        use std::cmp::Ordering::*;
+        if eq_f64(self.t(), other.t()) {
+            Some(Equal)
+        } else {
+            Some(if self.t() < other.t() { Greater } else { Less })
+        }
+    }
+}
+
+impl Ord for ShapeIntersection {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 #[derive(Debug)]
 pub struct IntersectionHeap {
-    inner: BinaryHeap<Intersection>,
+    inner: BinaryHeap<ShapeIntersection>,
 }
 
 impl IntersectionHeap {
@@ -64,11 +120,11 @@ impl IntersectionHeap {
         }
     }
 
-    pub fn push(&mut self, i: Intersection) {
+    pub fn push(&mut self, i: ShapeIntersection) {
         self.inner.push(i);
     }
 
-    pub fn hit(&self) -> Option<Intersection> {
+    pub fn hit(&self) -> Option<ShapeIntersection> {
         for i in 0..self.len() {
             let i = &self[i];
             if i.t.is_sign_positive() {
@@ -82,15 +138,15 @@ impl IntersectionHeap {
         self.inner.len()
     }
 
-    pub fn iter(&self) -> std::collections::binary_heap::Iter<Intersection> {
+    pub fn iter(&self) -> std::collections::binary_heap::Iter<ShapeIntersection> {
         self.inner.iter()
     }
 }
 
 impl IntoIterator for IntersectionHeap {
-    type Item = Intersection;
+    type Item = ShapeIntersection;
 
-    type IntoIter = std::collections::binary_heap::IntoIter<Intersection>;
+    type IntoIter = std::collections::binary_heap::IntoIter<ShapeIntersection>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.inner.into_iter()
@@ -98,7 +154,7 @@ impl IntoIterator for IntersectionHeap {
 }
 
 impl Index<usize> for IntersectionHeap {
-    type Output = Intersection;
+    type Output = ShapeIntersection;
 
     fn index(&self, index: usize) -> &Self::Output {
         let mut intersections = self.inner.iter().collect::<Vec<_>>();
@@ -107,8 +163,8 @@ impl Index<usize> for IntersectionHeap {
     }
 }
 
-impl FromIterator<Intersection> for IntersectionHeap {
-    fn from_iter<T: IntoIterator<Item = Intersection>>(iter: T) -> Self {
+impl FromIterator<ShapeIntersection> for IntersectionHeap {
+    fn from_iter<T: IntoIterator<Item = ShapeIntersection>>(iter: T) -> Self {
         let mut heap = IntersectionHeap::new();
         for i in iter {
             heap.push(i);
@@ -134,39 +190,37 @@ macro_rules! intersections {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
-    use crate::{intersection::Intersection, shape::sphere::Sphere, util::eq_f64};
+    use crate::{shape::sphere::Sphere, util::eq_f64};
 
     use super::*;
 
     #[test]
     fn an_intersection_encapsulates_t_and_object() {
-        let s = Rc::new(Sphere::new());
-        let i = Intersection::new(3.5, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(3.5, s.clone(), s.id());
 
         assert!(eq_f64(3.5, i.t()));
-        assert_eq!(i.object().as_ref(), s.as_ref())
+        assert_eq!(i.object(), s.clone());
     }
 
     #[test]
     fn aggregating_intersections() {
-        let s = Rc::new(Sphere::new());
-        let i1 = Intersection::new(1.0, s.clone());
-        let i2 = Intersection::new(2.0, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i1 = ShapeIntersection::new(1.0, s.clone(), s.id());
+        let i2 = ShapeIntersection::new(2.0, s.clone(), s.id());
 
         let xs = intersections![i1, i2];
-        assert_eq!(xs[0].object().as_ref(), s.as_ref());
+        assert_eq!(xs[0].object(), s.clone());
         assert_eq!(xs[0].t(), 1.0);
-        assert_eq!(xs[1].object().as_ref(), s.as_ref());
+        assert_eq!(xs[1].object(), s.clone());
         assert_eq!(xs[1].t(), 2.0);
     }
 
     #[test]
     fn the_hit_when_all_intersections_have_positive_t() {
-        let s = Rc::new(Sphere::new());
-        let i1 = Intersection::new(1.0, s.clone());
-        let i2 = Intersection::new(2.0, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i1 = ShapeIntersection::new(1.0, s.clone(), s.id());
+        let i2 = ShapeIntersection::new(2.0, s.clone(), s.id());
 
         let xs = intersections![i1.clone(), i2];
 
@@ -178,9 +232,9 @@ mod tests {
 
     #[test]
     fn the_hit_when_some_intersections_have_negative_t() {
-        let s = Rc::new(Sphere::new());
-        let i1 = Intersection::new(-1.0, s.clone());
-        let i2 = Intersection::new(1.0, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i1 = ShapeIntersection::new(-1.0, s.clone(), s.id());
+        let i2 = ShapeIntersection::new(1.0, s.clone(), s.id());
 
         let xs = intersections![i1, i2.clone()];
 
@@ -192,9 +246,9 @@ mod tests {
 
     #[test]
     fn the_hit_when_all_intersections_have_negative_t() {
-        let s = Rc::new(Sphere::new());
-        let i1 = Intersection::new(-2.0, s.clone());
-        let i2 = Intersection::new(-1.0, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i1 = ShapeIntersection::new(-2.0, s.clone(), s.id());
+        let i2 = ShapeIntersection::new(-1.0, s.clone(), s.id());
 
         let xs = intersections![i1, i2];
 
@@ -205,11 +259,11 @@ mod tests {
 
     #[test]
     fn the_hit_is_always_the_lowest_nonnegative_intersection() {
-        let s = Rc::new(Sphere::new());
-        let i1 = Intersection::new(5.0, s.clone());
-        let i2 = Intersection::new(7.0, s.clone());
-        let i3 = Intersection::new(-3.0, s.clone());
-        let i4 = Intersection::new(2.0, s);
+        let s = ShapeContainer::from(Sphere::new());
+        let i1 = ShapeIntersection::new(5.0, s.clone(), s.id());
+        let i2 = ShapeIntersection::new(7.0, s.clone(), s.id());
+        let i3 = ShapeIntersection::new(-3.0, s.clone(), s.id());
+        let i4 = ShapeIntersection::new(2.0, s.clone(), s.id());
 
         let xs = intersections![i1, i2, i3, i4.clone()];
 
