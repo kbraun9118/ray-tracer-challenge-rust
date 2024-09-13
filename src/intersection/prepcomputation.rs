@@ -43,7 +43,11 @@ impl PrepComputations {
         for i in xs.iter() {
             if i == &intersection {
                 if let Some(last) = containers.last() {
-                    n1 = last.borrow().material(i.object_id()).unwrap().refractive_index()
+                    n1 = last
+                        .borrow()
+                        .material(intersection.object_id())
+                        .unwrap_or_default()
+                        .refractive_index()
                 } else {
                     n1 = 1.0
                 }
@@ -60,7 +64,11 @@ impl PrepComputations {
 
             if i == &intersection {
                 if let Some(last) = containers.last() {
-                    n2 = last.borrow().material(intersection.object_id()).unwrap().refractive_index()
+                    n2 = last
+                        .borrow()
+                        .material(intersection.object_id())
+                        .unwrap_or_default()
+                        .refractive_index()
                 } else {
                     n2 = 1.0
                 }
