@@ -38,12 +38,12 @@ impl PrepComputations {
 
         let (mut n1, mut n2) = (0.0, 0.0);
 
-        let mut containers: Vec<ShapeContainer> = vec![];
+        let mut containers: Vec<(ShapeContainer, Uuid)> = vec![];
 
         for i in xs.iter() {
             if i == &intersection {
-                if let Some(last) = containers.last() {
-                    n1 = last.borrow().material(i.object_id()).unwrap().refractive_index()
+                if let Some((last, last_id)) = containers.last() {
+                    n1 = last.borrow().material(*last_id).unwrap().refractive_index()
                 } else {
                     n1 = 1.0
                 }
@@ -51,16 +51,16 @@ impl PrepComputations {
 
             if containers
                 .iter()
-                .any(|c| c.borrow().id() == i.object().borrow().id())
+                .any(|(c, _)| c.borrow().id() == i.object().borrow().id())
             {
-                containers.retain(|c| c.borrow().id() != i.object().borrow().id());
+                containers.retain(|(c, _)| c.borrow().id() != i.object().borrow().id());
             } else {
-                containers.push(i.object().clone());
+                containers.push((i.object().clone(), i.object_id()));
             }
 
             if i == &intersection {
-                if let Some(last) = containers.last() {
-                    n2 = last.borrow().material(intersection.object_id()).unwrap().refractive_index()
+                if let Some((last, last_id)) = containers.last() {
+                    n2 = last.borrow().material(*last_id).unwrap().refractive_index()
                 } else {
                     n2 = 1.0
                 }
