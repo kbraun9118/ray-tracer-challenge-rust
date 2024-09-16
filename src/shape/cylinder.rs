@@ -1,13 +1,15 @@
 use std::mem::swap;
 
+use uuid::Uuid;
+
 use crate::{
-    intersection::ray::Ray,
+    intersection::{ray::Ray, Intersection},
     transformation::Transformation,
     tuple::Tuple,
     util::{eq_f64, EPSILON},
 };
 
-use super::{material::Material, BoundedBox, Shape};
+use super::{material::Material, BoundedBox, Shape, WeakGroupContainer};
 
 #[derive(Debug)]
 pub struct Cylinder {
@@ -17,7 +19,7 @@ pub struct Cylinder {
     minimum: f64,
     maximum: f64,
     closed: bool,
-    parent: Option<*mut dyn Shape>,
+    parent: Option<WeakGroupContainer>,
 }
 
 fn check_cap(ray: Ray, t: f64) -> bool {
@@ -64,19 +66,19 @@ impl Cylinder {
         self.closed = closed;
     }
 
-    fn intersect_caps(&self, ray: Ray, xs: &mut Vec<f64>) {
+    fn intersect_caps(&self, ray: Ray, xs: &mut Vec<Intersection>) {
         if !self.closed || eq_f64(ray.direction().y(), 0.0) {
             return;
         }
 
         let t = (self.minimum - ray.origin().y()) / ray.direction().y();
         if check_cap(ray, t) {
-            xs.push(t);
+            xs.push(Intersection::new(t, self.id));
         }
 
         let t = (self.maximum - ray.origin().y()) / ray.direction().y();
         if check_cap(ray, t) {
-            xs.push(t);
+            xs.push(Intersection::new(t, self.id));
         }
     }
 }
@@ -86,7 +88,7 @@ impl Shape for Cylinder {
         self.id
     }
 
-    fn local_intersect(&self, ray: Ray) -> Vec<f64> {
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
         let a = ray.direction().x().powi(2) + ray.direction().z().powi(2);
 
         if eq_f64(a, 0.0) {
@@ -116,12 +118,12 @@ impl Shape for Cylinder {
 
         let y0 = ray.origin().y() + t0 * ray.direction().y();
         if self.minimum < y0 && y0 < self.maximum {
-            xs.push(t0)
+            xs.push(Intersection::new(t0, self.id))
         }
 
         let y1 = ray.origin().y() + t1 * ray.direction().y();
         if self.minimum < y1 && y1 < self.maximum {
-            xs.push(t1);
+            xs.push(Intersection::new(t1, self.id));
         }
         self.intersect_caps(ray, &mut xs);
 
@@ -136,32 +138,40 @@ impl Shape for Cylinder {
         self.transformation = transformation;
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self, id: Uuid) -> Option<Material> {
+        if self.id == id {
+            Some(self.material.clone())
+        } else {
+            None
+        }
     }
 
     fn set_material(&mut self, material: Material) {
         self.material = material;
     }
 
-    fn local_normal_at(&self, point: Tuple) -> Tuple {
+    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+        if self.id != id {
+            return None;
+        }
+
         let dist = point.x().powi(2) + point.z().powi(2);
 
-        if dist < 1.0 && point.y() >= self.maximum - EPSILON {
+        Some(if dist < 1.0 && point.y() >= self.maximum - EPSILON {
             Tuple::vector(0.0, 1.0, 0.0)
         } else if dist < 1.0 && point.y() < self.minimum + EPSILON {
             Tuple::vector(0.0, -1.0, 0.0)
         } else {
             Tuple::vector(point.x(), 0.0, point.z())
-        }
+        })
     }
 
-    fn parent(&self) -> Option<*mut dyn Shape> {
+    fn parent(&self) -> Option<WeakGroupContainer> {
         self.parent.clone()
     }
 
-    fn set_parent(&mut self, parent: *mut dyn Shape) {
-        self.parent = Some(parent);
+    fn set_parent(&mut self, parent: WeakGroupContainer) {
+        self.parent = Some(parent.clone());
     }
 
     fn bounds(&self) -> BoundedBox {
@@ -225,8 +235,8 @@ mod tests {
             let r = Ray::new(origin, direction);
             let xs = cyl.local_intersect(r);
             assert_eq!(xs.len(), 2);
-            assert!(eq_f64(xs[0], t0));
-            assert!(eq_f64(xs[1], t1));
+            assert!(eq_f64(xs[0].t(), t0));
+            assert!(eq_f64(xs[1].t(), t1));
         }
     }
 
@@ -241,7 +251,7 @@ mod tests {
 
         let cyl = Cylinder::new();
         for (point, normal) in exs {
-            let n = cyl.local_normal_at(point);
+            let n = cyl.local_normal_at(cyl.id(), point).unwrap();
             assert_eq!(n, normal);
         }
     }
@@ -342,7 +352,7 @@ mod tests {
         cyl.set_closed(true);
 
         for (point, normal) in exs {
-            let n = cyl.local_normal_at(point);
+            let n = cyl.local_normal_at(cyl.id(), point).unwrap();
             assert_eq!(n, normal);
         }
     }

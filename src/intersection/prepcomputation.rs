@@ -1,18 +1,14 @@
-use std::rc::Rc;
+use uuid::Uuid;
 
-use crate::{
-    intersection::{ray::Ray, Intersection},
-    shape::Shape,
-    tuple::Tuple,
-    util::EPSILON,
-};
+use crate::{intersection::ray::Ray, shape::ShapeContainer, tuple::Tuple, util::EPSILON};
 
-use super::IntersectionHeap;
+use super::{IntersectionHeap, ShapeIntersection};
 
 #[derive(Debug, Clone)]
 pub struct PrepComputations {
     t: f64,
-    object: Rc<dyn Shape>,
+    object: ShapeContainer,
+    object_id: Uuid,
     point: Tuple,
     over_point: Tuple,
     under_point: Tuple,
@@ -25,9 +21,13 @@ pub struct PrepComputations {
 }
 
 impl PrepComputations {
-    pub fn new(intersection: Intersection, ray: Ray, xs: &IntersectionHeap) -> Self {
+    pub fn new(intersection: ShapeIntersection, ray: Ray, xs: &IntersectionHeap) -> Self {
         let point = ray.position(intersection.t());
-        let mut normal_v = intersection.object().normal_at(point);
+        let mut normal_v = intersection
+            .object()
+            .borrow()
+            .normal_at(intersection.object_id(), point)
+            .unwrap();
         let eye_v = -ray.direction();
         let mut inside = false;
 
@@ -38,26 +38,29 @@ impl PrepComputations {
 
         let (mut n1, mut n2) = (0.0, 0.0);
 
-        let mut containers: Vec<Rc<dyn Shape>> = vec![];
+        let mut containers: Vec<(ShapeContainer, Uuid)> = vec![];
 
         for i in xs.iter() {
             if i == &intersection {
-                if let Some(last) = containers.last() {
-                    n1 = last.material().refractive_index()
+                if let Some((last, last_id)) = containers.last() {
+                    n1 = last.borrow().material(*last_id).unwrap().refractive_index()
                 } else {
                     n1 = 1.0
                 }
             }
 
-            if containers.iter().any(|c| c.id() == i.object().id()) {
-                containers.retain(|c| c.id() != i.object().id());
+            if containers
+                .iter()
+                .any(|(c, _)| c.borrow().id() == i.object().borrow().id())
+            {
+                containers.retain(|(c, _)| c.borrow().id() != i.object().borrow().id());
             } else {
-                containers.push(i.object().clone());
+                containers.push((i.object().clone(), i.object_id()));
             }
 
             if i == &intersection {
-                if let Some(last) = containers.last() {
-                    n2 = last.material().refractive_index()
+                if let Some((last, last_id)) = containers.last() {
+                    n2 = last.borrow().material(*last_id).unwrap().refractive_index()
                 } else {
                     n2 = 1.0
                 }
@@ -68,6 +71,7 @@ impl PrepComputations {
         Self {
             t: intersection.t(),
             object: intersection.object().clone(),
+            object_id: intersection.object_id,
             point,
             over_point: point + normal_v * EPSILON,
             under_point: point - normal_v * EPSILON,
@@ -84,8 +88,12 @@ impl PrepComputations {
         self.t
     }
 
-    pub fn object(&self) -> &Rc<dyn Shape> {
-        &self.object
+    pub fn object(&self) -> ShapeContainer {
+        self.object.clone()
+    }
+
+    pub fn object_id(&self) -> Uuid {
+        self.object_id
     }
 
     pub fn point(&self) -> Tuple {
@@ -149,7 +157,7 @@ mod tests {
 
     use crate::{
         intersections,
-        shape::{material::Material, plane::Plane, sphere::Sphere},
+        shape::{material::Material, plane::Plane, sphere::Sphere, Shape},
         transformation::Transformation,
         util::eq_f64,
     };
@@ -159,13 +167,13 @@ mod tests {
     #[test]
     fn the_hit_when_an_intersection_occurs_on_the_outside() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Rc::new(Sphere::new());
-        let i = Intersection::new(4.0, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(4.0, s.clone(), s.id());
 
         let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert_eq!(i.t(), comps.t());
-        assert_eq!(i.object().as_ref(), comps.object().as_ref());
+        assert_eq!(i.object().borrow().id(), comps.object().borrow().id());
         assert_eq!(Tuple::point(0.0, 0.0, -1.0), comps.point());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.eye_v());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.normal_v());
@@ -175,13 +183,13 @@ mod tests {
     #[test]
     fn the_hit_when_an_intersection_occurs_on_the_inside() {
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        let s = Rc::new(Sphere::new());
-        let i = Intersection::new(1.0, s.clone());
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(1.0, s.clone(), s.id());
 
         let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert_eq!(i.t(), comps.t());
-        assert_eq!(i.object().as_ref(), comps.object().as_ref());
+        assert_eq!(i.object().borrow().id(), comps.object().borrow().id());
         assert_eq!(Tuple::point(0.0, 0.0, 1.0), comps.point());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.eye_v());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.normal_v());
@@ -192,9 +200,10 @@ mod tests {
     fn the_hit_should_offset_the_point() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let mut s = Sphere::new();
+        let s_id = s.id();
         s.set_transformation(Transformation::identity().translation(0.0, 0.0, 1.0));
 
-        let i = Intersection::new(5.0, Rc::new(s));
+        let i = ShapeIntersection::new(5.0, ShapeContainer::from(s), s_id);
         let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert!(comps.over_point().z() < -EPSILON / 2.0);
@@ -203,12 +212,12 @@ mod tests {
 
     #[test]
     fn pre_computing_the_reflection_vector() {
-        let shape = Rc::new(Plane::new());
+        let shape = ShapeContainer::from(Plane::new());
         let r = Ray::new(
             Tuple::point(0.0, 1.0, -1.0),
             Tuple::vector(0.0, -(2f64.sqrt()) / 2.0, 2f64.sqrt() / 2.0),
         );
-        let i = Intersection::new(2f64.sqrt(), shape.clone());
+        let i = ShapeIntersection::new(2f64.sqrt(), shape.clone(), shape.id());
 
         let comps = PrepComputations::new(i, r, &mut IntersectionHeap::new());
 
@@ -223,17 +232,17 @@ mod tests {
         let mut a = Sphere::glassy();
         a.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
         a.set_material(Material::new().with_refractive_index(1.5));
-        let a = Rc::new(a);
+        let a = ShapeContainer::from(a);
 
         let mut b = Sphere::glassy();
         b.set_transformation(Transformation::identity().translation(0.0, 0.0, -0.25));
         b.set_material(Material::new().with_refractive_index(2.0));
-        let b = Rc::new(b);
+        let b = ShapeContainer::from(b);
 
         let mut c = Sphere::glassy();
         c.set_transformation(Transformation::identity().translation(0.0, 0.0, 0.25));
         c.set_material(Material::new().with_refractive_index(2.5));
-        let c = Rc::new(c);
+        let c = ShapeContainer::from(c);
 
         let r = Ray::new(Tuple::point(0.0, 0.0, -4.0), Tuple::vector(0.0, 0.0, 1.0));
         let mut xs = vec![
@@ -245,7 +254,7 @@ mod tests {
             (6.0, a.clone()),
         ]
         .into_iter()
-        .map(|(t, obj)| Intersection::new(t, obj))
+        .map(|(t, obj)| ShapeIntersection::new(t, obj.clone(), obj.borrow().id()))
         .collect::<IntersectionHeap>();
 
         let ns = vec![
@@ -270,9 +279,9 @@ mod tests {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let mut shape = Sphere::glassy();
         shape.set_transformation(Transformation::identity().translation(0.0, 0.0, 1.0));
-        let shape = Rc::new(shape);
+        let shape = ShapeContainer::from(shape);
 
-        let i = Intersection::new(5.0, shape);
+        let i = ShapeIntersection::new(5.0, shape.clone(), shape.id());
         let xs = intersections!(i.clone());
         let comps = PrepComputations::new(i, r, &xs);
 
@@ -282,14 +291,14 @@ mod tests {
 
     #[test]
     fn the_schlick_approximation_under_total_internal_reflection() {
-        let shape = Rc::new(Sphere::glassy());
+        let shape = ShapeContainer::from(Sphere::glassy());
         let r = Ray::new(
             Tuple::point(0.0, 0.0, 2f64.sqrt() / 2.0),
             Tuple::vector(0.0, 1.0, 0.0),
         );
         let xs = intersections!(
-            Intersection::new(-(2f64.sqrt()) / 2.0, shape.clone()),
-            Intersection::new(2f64.sqrt() / 2.0, shape.clone())
+            ShapeIntersection::new(-(2f64.sqrt()) / 2.0, shape.clone(), shape.id()),
+            ShapeIntersection::new(2f64.sqrt() / 2.0, shape.clone(), shape.id())
         );
         let comps = PrepComputations::new(xs[1].clone(), r, &xs);
         let reflectance = comps.schlick();
@@ -298,11 +307,11 @@ mod tests {
 
     #[test]
     fn the_schlick_approximation_with_a_perpendicular_viewing_angle() {
-        let shape = Rc::new(Sphere::glassy());
+        let shape = ShapeContainer::from(Sphere::glassy());
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 1.0, 0.0));
         let xs = intersections!(
-            Intersection::new(-1.0, shape.clone()),
-            Intersection::new(1.0, shape.clone())
+            ShapeIntersection::new(-1.0, shape.clone(), shape.id()),
+            ShapeIntersection::new(1.0, shape.clone(), shape.id())
         );
         let comps = PrepComputations::new(xs[1].clone(), r, &xs);
         let reflectance = comps.schlick();
@@ -311,9 +320,9 @@ mod tests {
 
     #[test]
     fn the_schlick_approximation_with_small_angle_and_n2_gt_n1() {
-        let shape = Rc::new(Sphere::glassy());
+        let shape = ShapeContainer::from(Sphere::glassy());
         let r = Ray::new(Tuple::point(0.0, 0.99, -2.0), Tuple::vector(0.0, 0.0, 1.0));
-        let xs = intersections!(Intersection::new(1.8589, shape.clone()));
+        let xs = intersections!(ShapeIntersection::new(1.8589, shape.clone(), shape.id()));
         let comps = PrepComputations::new(xs[0].clone(), r, &xs);
         let reflectance = comps.schlick();
         assert!(eq_f64(reflectance, 0.48873));

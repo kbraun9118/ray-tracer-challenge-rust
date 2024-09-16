@@ -133,7 +133,7 @@ mod tests {
         let mut object = Sphere::new();
         object.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
         let pattern = StripePattern::new(Colors::White.into(), Colors::Black.into());
-        let c = pattern.color_at_object(&object, Tuple::point(1.5, 0.0, 0.0));
+        let c = pattern.color_at_object(object.into(), Tuple::point(1.5, 0.0, 0.0));
 
         assert_eq!(c, Colors::White.into());
     }
@@ -143,7 +143,7 @@ mod tests {
         let object = Sphere::new();
         let mut pattern = StripePattern::new(Colors::White.into(), Colors::Black.into());
         pattern.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
-        let c = pattern.color_at_object(&object, Tuple::point(1.5, 0.0, 0.0));
+        let c = pattern.color_at_object(object.into(), Tuple::point(1.5, 0.0, 0.0));
 
         assert_eq!(c, Colors::White.into());
     }
@@ -154,7 +154,7 @@ mod tests {
         object.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
         let mut pattern = StripePattern::new(Colors::White.into(), Colors::Black.into());
         pattern.set_transformation(Transformation::identity().translation(0.5, 0.0, 0.0));
-        let c = pattern.color_at_object(&object, Tuple::point(2.5, 0.0, 0.0));
+        let c = pattern.color_at_object(object.into(), Tuple::point(2.5, 0.0, 0.0));
 
         assert_eq!(c, Colors::White.into());
     }

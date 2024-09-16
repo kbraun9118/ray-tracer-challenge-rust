@@ -17,11 +17,20 @@ pub enum Colors {
     White,
     Black,
     Blue,
+    Purple,
 }
 
 impl Color {
     pub fn new(red: f64, green: f64, blue: f64) -> Self {
-        Color { red, green, blue }
+        Self { red, green, blue }
+    }
+
+    pub fn new_scaled(red: u8, green: u8, blue: u8) -> Self {
+        Self {
+            red: (red as f64) / 255.0,
+            green: (green as f64) / 255.0,
+            blue: (blue as f64) / 255.0,
+        }
     }
 
     pub fn red(&self) -> f64 {
@@ -54,7 +63,8 @@ impl From<Colors> for Color {
             Red => (1.0, 0.0, 0.0),
             White => (1.0, 1.0, 1.0),
             Black => (0.0, 0.0, 0.0),
-            Blue => (0.0, 0.0, 1.0)
+            Blue => (0.0, 0.0, 1.0),
+            Purple => (128.0 / 255.0, 0.0, 128.0 / 255.0),
         };
 
         Self::new(red, green, blue)

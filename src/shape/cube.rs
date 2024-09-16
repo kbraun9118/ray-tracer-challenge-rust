@@ -1,20 +1,22 @@
 use std::{f64::INFINITY, mem::swap};
 
+use uuid::Uuid;
+
 use crate::{
-    intersection::ray::Ray,
+    intersection::{ray::Ray, Intersection},
     transformation::Transformation,
     tuple::Tuple,
     util::{self, eq_f64},
 };
 
-use super::{material::Material, BoundedBox, Shape};
+use super::{material::Material, BoundedBox, Shape, WeakGroupContainer};
 
 #[derive(Debug)]
 pub struct Cube {
     id: uuid::Uuid,
     transformation: Transformation,
     material: Material,
-    parent: Option<*mut dyn Shape>,
+    parent: Option<WeakGroupContainer>,
 }
 
 impl Cube {
@@ -50,7 +52,7 @@ impl Shape for Cube {
         self.id
     }
 
-    fn local_intersect(&self, ray: Ray) -> Vec<f64> {
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
         let (xtmin, xtmax) = check_axis(ray.origin().x(), ray.direction().x());
         let (ytmin, ytmax) = check_axis(ray.origin().y(), ray.direction().y());
         let (ztmin, ztmax) = check_axis(ray.origin().z(), ray.direction().z());
@@ -61,7 +63,10 @@ impl Shape for Cube {
         if tmin > tmax {
             vec![]
         } else {
-            vec![tmin, tmax]
+            vec![
+                Intersection::new(tmin, self.id),
+                Intersection::new(tmax, self.id),
+            ]
         }
     }
 
@@ -73,32 +78,40 @@ impl Shape for Cube {
         self.transformation = transformation;
     }
 
-    fn material(&self) -> Material {
-        self.material.clone()
+    fn material(&self, id: Uuid) -> Option<Material> {
+        if self.id == id {
+            Some(self.material.clone())
+        } else {
+            None
+        }
     }
 
     fn set_material(&mut self, material: Material) {
         self.material = material;
     }
 
-    fn local_normal_at(&self, point: Tuple) -> Tuple {
+    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+        if self.id != id {
+            return None;
+        }
+
         let max_c = point.x().abs().max(point.y().abs()).max(point.z().abs());
 
-        if eq_f64(max_c, point.x().abs()) {
+        Some(if eq_f64(max_c, point.x().abs()) {
             Tuple::vector(point.x(), 0.0, 0.0)
         } else if eq_f64(max_c, point.y().abs()) {
             Tuple::vector(0.0, point.y(), 0.0)
         } else {
             Tuple::vector(0.0, 0.0, point.z())
-        }
+        })
     }
 
-    fn parent(&self) -> Option<*mut dyn Shape> {
-        self.parent
+    fn parent(&self) -> Option<WeakGroupContainer> {
+        self.parent.clone()
     }
 
-    fn set_parent(&mut self, parent: *mut dyn Shape) {
-        self.parent = Some(parent);
+    fn set_parent(&mut self, parent: WeakGroupContainer) {
+        self.parent = Some(parent.clone());
     }
 
     fn bounds(&self) -> BoundedBox {
@@ -164,8 +177,8 @@ mod tests {
             let r = Ray::new(origin, direction);
             let xs = c.local_intersect(r);
             assert_eq!(xs.len(), 2);
-            assert_eq!(xs[0], t1);
-            assert_eq!(xs[1], t2);
+            assert_eq!(xs[0].t(), t1);
+            assert_eq!(xs[1].t(), t2);
         }
     }
 
@@ -193,7 +206,7 @@ mod tests {
         for (origin, direction) in input {
             let r = Ray::new(origin, direction);
             let xs = c.local_intersect(r);
-            assert!(dbg!(xs.is_empty()));
+            assert!(xs.is_empty());
         }
     }
 
@@ -214,7 +227,7 @@ mod tests {
         ];
         let c = Cube::new();
         for (point, normal) in input {
-            let n = c.local_normal_at(point);
+            let n = c.local_normal_at(c.id, point).unwrap();
             assert_eq!(n, normal);
         }
     }

@@ -1,13 +1,26 @@
-use crate::transformation::Transformation;
+use std::{
+    cell::RefCell,
+    ops::Deref,
+    rc::{Rc, Weak},
+};
 
-use super::{BoundedBox, Shape};
+use uuid::Uuid;
+
+use crate::{
+    intersection::{ray::Ray, Intersection},
+    transformation::Transformation,
+    tuple::Tuple,
+};
+
+use super::{material::Material, BoundedBox, Shape, ShapeContainer};
 
 #[derive(Debug)]
 pub struct Group {
     id: uuid::Uuid,
-    shapes: Vec<*mut dyn Shape>,
+    shapes: Vec<ShapeContainer>,
     transformation: Transformation,
-    parent: Option<*mut dyn Shape>,
+    parent: Option<WeakGroupContainer>,
+    bounding_box: BoundedBox,
 }
 
 impl Group {
@@ -18,17 +31,8 @@ impl Group {
             shapes: vec![],
             transformation: Transformation::default(),
             parent: None,
+            bounding_box: BoundedBox::empty(),
         }
-    }
-
-    pub fn add_child(&mut self, shape: *mut dyn Shape) {
-        unsafe {
-            shape
-                .as_mut()
-                .expect("Could not add shape")
-                .set_parent(self);
-        }
-        self.shapes.push(shape);
     }
 }
 
@@ -37,56 +41,122 @@ impl Shape for Group {
         self.id
     }
 
-    fn local_intersect(&self, ray: crate::intersection::ray::Ray) -> Vec<f64> {
+    fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
         let mut xs = vec![];
-
-        for shape in &self.shapes {
-            let mut shape_xs = unsafe {
-                shape
-                    .as_ref()
-                    .expect("Could not find local intersection")
-                    .intersects(ray)
-            };
-            xs.append(&mut shape_xs);
+        if self.bounding_box.intersects(ray) {
+            for shape in &self.shapes {
+                let mut shape_xs = shape.borrow().intersects(ray);
+                xs.append(&mut shape_xs);
+            }
         }
         xs
     }
 
-    fn transformation(&self) -> crate::transformation::Transformation {
+    fn transformation(&self) -> Transformation {
         self.transformation.clone()
     }
 
-    fn set_transformation(&mut self, transformation: crate::transformation::Transformation) {
+    fn set_transformation(&mut self, transformation: Transformation) {
         self.transformation = transformation;
     }
 
-    fn material(&self) -> super::material::Material {
+    fn material(&self, id: Uuid) -> Option<Material> {
+        self.shapes
+            .iter()
+            .filter_map(|s| s.borrow().material(id))
+            .next()
+    }
+
+    fn set_material(&mut self, _material: Material) {
         panic!("Group cannot have material")
     }
 
-    fn set_material(&mut self, _material: super::material::Material) {
-        panic!("Group cannot have material")
+    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+        self.shapes
+            .iter()
+            .filter_map(|s| s.borrow().local_normal_at(id, point))
+            .next()
     }
 
-    fn local_normal_at(&self, _point: crate::tuple::Tuple) -> crate::tuple::Tuple {
-        panic!("Cannot find local normal of group")
+    fn parent(&self) -> Option<WeakGroupContainer> {
+        self.parent.clone()
     }
 
-    fn parent(&self) -> Option<*mut dyn Shape> {
-        self.parent
-    }
-
-    fn set_parent(&mut self, parent: *mut dyn Shape) {
-        self.parent = Some(parent);
+    fn set_parent(&mut self, parent: WeakGroupContainer) {
+        self.parent = Some(parent.clone());
     }
 
     fn bounds(&self) -> BoundedBox {
-        panic!("Will look at this later")
+        let mut bbox = BoundedBox::empty();
+        for child in &self.shapes {
+            bbox.add_box(child.borrow().parent_space_bounds());
+        }
+        bbox
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupContainer(Rc<RefCell<Group>>);
+
+impl GroupContainer {
+    pub fn add_child(&self, shape: ShapeContainer) {
+        let weak_container = Rc::downgrade(self);
+        shape
+            .borrow_mut()
+            .set_parent(WeakGroupContainer(weak_container));
+
+        let mut group = self.borrow_mut();
+        group.shapes.push(shape);
+        group.bounding_box = group.bounds()
+    }
+}
+
+impl Default for GroupContainer {
+    fn default() -> Self {
+        Self(Rc::new(RefCell::new(Group::new())))
+    }
+}
+
+impl From<Group> for GroupContainer {
+    fn from(value: Group) -> Self {
+        GroupContainer(Rc::new(RefCell::new(value)))
+    }
+}
+
+impl Into<ShapeContainer> for GroupContainer {
+    fn into(self) -> ShapeContainer {
+        ShapeContainer(self.0)
+    }
+}
+
+impl Deref for GroupContainer {
+    type Target = Rc<RefCell<Group>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WeakGroupContainer(Weak<RefCell<Group>>);
+
+impl From<GroupContainer> for WeakGroupContainer {
+    fn from(value: GroupContainer) -> Self {
+        WeakGroupContainer(Rc::downgrade(&value.0))
+    }
+}
+
+impl Deref for WeakGroupContainer {
+    type Target = Weak<RefCell<Group>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use crate::{intersection::ray::Ray, shape::sphere::Sphere, tuple::Tuple};
 
     use super::*;
@@ -107,14 +177,14 @@ mod tests {
 
     #[test]
     fn adding_a_child_to_a_group() {
-        let mut g = Group::new();
-        let mut s = Sphere::new();
-        g.add_child(&mut s);
-        assert!(!g.shapes.is_empty());
-        assert!(g.shapes.contains(&(&mut s as *mut dyn Shape)));
-        unsafe {
-            assert_eq!(s.parent().unwrap().as_ref().unwrap(), &g);
-        }
+        let g = GroupContainer::from(Group::new());
+        let s = ShapeContainer::from(Sphere::new());
+        let s_id = s.borrow().id();
+        g.add_child(s.clone());
+        assert!(!g.borrow().shapes.is_empty());
+        assert!(g.borrow().shapes.iter().any(|s| s.borrow().id() == s_id));
+        let s_parent_id = s.borrow().parent().unwrap().upgrade().unwrap().borrow().id;
+        assert_eq!(s_parent_id, g.borrow().id());
     }
 
     #[test]
@@ -129,18 +199,19 @@ mod tests {
 
     #[test]
     fn intersecting_a_ray_with_a_nonempty_group() {
-        let mut g = Group::new();
-        let mut s1 = Sphere::new();
+        let g = Group::new();
+        let s1 = Sphere::new();
         let mut s2 = Sphere::new();
         s2.set_transformation(Transformation::default().translation(0.0, 0.0, -3.0));
         let mut s3 = Sphere::new();
         s3.set_transformation(Transformation::default().translation(5.0, 0.0, 0.0));
-        g.add_child(&mut s1);
-        g.add_child(&mut s2);
-        g.add_child(&mut s3);
+        let g = GroupContainer::from(g);
+        g.add_child(s1.into());
+        g.add_child(s2.into());
+        g.add_child(s3.into());
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
 
-        let xs = g.local_intersect(r);
+        let xs = g.borrow().local_intersect(r);
 
         assert_eq!(xs.len(), 4);
     }
@@ -151,10 +222,11 @@ mod tests {
         g.set_transformation(Transformation::identity().scale(2.0, 2.0, 2.0));
         let mut s = Sphere::new();
         s.set_transformation(Transformation::identity().translation(5.0, 0.0, 0.0));
-        g.add_child(&mut s);
+        let g = GroupContainer::from(g);
+        g.add_child(s.into());
         let r = Ray::new(Tuple::point(10.0, 0.0, -10.0), Tuple::vector(0.0, 0.0, 1.0));
 
-        let xs = g.intersects(r);
+        let xs = g.borrow().intersects(r);
 
         assert_eq!(xs.len(), 2);
     }

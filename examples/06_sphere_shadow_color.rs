@@ -1,12 +1,10 @@
-use std::rc::Rc;
-
 use ray_tracer_challenge::{
     canvas::Canvas,
     color::{Color, Colors},
     error::RayTraceResult,
     intersection::ray::Ray,
     point_light::PointLight,
-    shape::{material::Material, sphere::Sphere, Shape},
+    shape::{material::Material, sphere::Sphere, Shape, ShapeContainer},
     transformation::Transformation,
     tuple::Tuple,
 };
@@ -22,7 +20,7 @@ fn main() -> RayTraceResult<()> {
             .scale(50.0, 50.0, 50.0)
             .translation(200.0, 200.0, -300.0),
     );
-    let sphere = Rc::new(sphere);
+    let sphere = ShapeContainer::from(sphere);
 
     let light_position = Tuple::point(-100.0, -100.0, -600.0);
     let light_color = Colors::White.into();
@@ -39,11 +37,16 @@ fn main() -> RayTraceResult<()> {
 
             c[(x, y)] = if let Some(hit) = intersections.hit() {
                 let point = r.position(hit.t());
-                let normal = hit.object().normal_at(point);
+                let normal = hit.object().borrow().normal_at(sphere.id(), point).unwrap();
                 let eye = -r.direction();
-                hit.object()
-                    .material()
-                    .lighting(hit.object().as_ref(), light, point, eye, normal, false)
+                hit.object().borrow().material(hit.object_id()).unwrap().lighting(
+                    hit.object().clone(),
+                    light,
+                    point,
+                    eye,
+                    normal,
+                    false,
+                )
             } else {
                 Colors::Black.into()
             };
