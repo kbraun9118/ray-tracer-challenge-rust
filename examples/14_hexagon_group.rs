@@ -20,6 +20,7 @@ use ray_tracer_challenge::{
 
 fn hexagon_corner(material: Material) -> Sphere {
     let mut corner = Sphere::new();
+    corner.set_material(Material::new().with_transparency(0.25));
     corner.set_transformation(
         Transformation::identity()
             .scale(0.25, 0.25, 0.25)
@@ -33,6 +34,7 @@ fn hexagon_edge(material: Material) -> Cylinder {
     let mut edge = Cylinder::new();
     edge.set_minimum(0.0);
     edge.set_maximum(1.0);
+    edge.set_material(Material::new().with_transparency(0.25));
     edge.set_transformation(
         Transformation::identity()
             .scale(0.25, 1.0, 0.25)
@@ -107,10 +109,11 @@ fn main() -> RayTraceResult<()> {
     world.add_shape(back_wall.into());
 
     // smaller resolution, faster rendering
-    let mut camera = Camera::new(200, 150, f64::consts::PI / 3.0);
+    // let mut camera = Camera::new(200, 150, f64::consts::PI / 3.0);
+    let mut camera = Camera::new(2400 / 2, 1200 / 2, f64::consts::PI / 3.0);
 
     // larger resolution, slower rendering
-    // let mut camera = Camera::new(1200, 600, PI / 3.0);
+    // let mut camera = Camera::new(2400, 1200, f64::consts::PI / 3.0);
     camera.set_transformation(Transformation::view(
         Tuple::point(0.0, 3.0, -5.0),
         Tuple::point(0.0, 1.0, 0.0),

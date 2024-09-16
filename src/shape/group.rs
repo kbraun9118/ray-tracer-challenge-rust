@@ -20,6 +20,7 @@ pub struct Group {
     shapes: Vec<ShapeContainer>,
     transformation: Transformation,
     parent: Option<WeakGroupContainer>,
+    bounding_box: BoundedBox,
 }
 
 impl Group {
@@ -30,6 +31,7 @@ impl Group {
             shapes: vec![],
             transformation: Transformation::default(),
             parent: None,
+            bounding_box: BoundedBox::empty(),
         }
     }
 }
@@ -41,10 +43,11 @@ impl Shape for Group {
 
     fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
         let mut xs = vec![];
-
-        for shape in &self.shapes {
-            let mut shape_xs = shape.borrow().intersects(ray);
-            xs.append(&mut shape_xs);
+        if self.bounding_box.intersects(ray) {
+            for shape in &self.shapes {
+                let mut shape_xs = shape.borrow().intersects(ray);
+                xs.append(&mut shape_xs);
+            }
         }
         xs
     }
@@ -84,7 +87,11 @@ impl Shape for Group {
     }
 
     fn bounds(&self) -> BoundedBox {
-        panic!("Will look at this later")
+        let mut bbox = BoundedBox::empty();
+        for child in &self.shapes {
+            bbox.add_box(child.borrow().parent_space_bounds());
+        }
+        bbox
     }
 }
 
@@ -98,7 +105,9 @@ impl GroupContainer {
             .borrow_mut()
             .set_parent(WeakGroupContainer(weak_container));
 
-        self.borrow_mut().shapes.push(shape);
+        let mut group = self.borrow_mut();
+        group.shapes.push(shape);
+        group.bounding_box = group.bounds()
     }
 }
 

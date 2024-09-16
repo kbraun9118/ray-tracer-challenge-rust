@@ -306,4 +306,5 @@ mod tests {
             assert_eq!(n, normal);
         }
     }
+
 }

@@ -70,7 +70,7 @@ impl World {
                 .object()
                 .borrow()
                 .material(comps.object_id())
-                .unwrap()
+                .unwrap_or_default()
                 .lighting(
                     comps.object().clone(),
                     light,
@@ -217,8 +217,6 @@ impl Default for World {
 #[cfg(test)]
 mod tests {
 
-    use uuid::Uuid;
-
     use crate::{
         intersection::ShapeIntersection,
         intersections,
@@ -255,10 +253,11 @@ mod tests {
             .shapes()
             .iter()
             .any(|i| i.borrow().transformation() == s1_transformation));
-        assert!(world
-            .shapes()
-            .iter()
-            .any(|i| i.borrow().material(world.shapes()[1].id()).unwrap() == s2_material));
+        assert!(world.shapes().iter().any(|i| i
+            .borrow()
+            .material(world.shapes()[0].id())
+            .unwrap()
+            == s2_material));
     }
 
     #[test]

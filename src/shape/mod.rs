@@ -1,3 +1,4 @@
+use bounded_box::BoundedBox;
 use group::WeakGroupContainer;
 use uuid::Uuid;
 
@@ -9,6 +10,7 @@ use self::material::Material;
 
 use crate::intersection::ray::Ray;
 
+pub mod bounded_box;
 pub mod cone;
 pub mod cube;
 pub mod cylinder;
@@ -16,21 +18,6 @@ pub mod group;
 pub mod material;
 pub mod plane;
 pub mod sphere;
-
-#[derive(Debug)]
-pub struct BoundedBox {
-    _min: Tuple,
-    _max: Tuple,
-}
-
-impl BoundedBox {
-    fn new(min: Tuple, max: Tuple) -> Self {
-        Self {
-            _min: min,
-            _max: max,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ShapeContainer(Rc<RefCell<dyn Shape>>);
@@ -112,6 +99,10 @@ pub trait Shape: Debug {
         }
 
         normal
+    }
+
+    fn parent_space_bounds(&self) -> BoundedBox {
+        self.bounds().transform(self.transformation())
     }
 }
 
