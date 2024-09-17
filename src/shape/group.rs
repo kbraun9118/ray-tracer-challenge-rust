@@ -34,6 +34,10 @@ impl Group {
             bounding_box: BoundedBox::empty(),
         }
     }
+
+    pub fn children(&self) -> Vec<ShapeContainer> {
+        self.shapes.clone()
+    }
 }
 
 impl Shape for Group {

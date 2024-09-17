@@ -18,6 +18,7 @@ pub mod group;
 pub mod material;
 pub mod plane;
 pub mod sphere;
+pub mod triangle;
 
 #[derive(Debug, Clone)]
 pub struct ShapeContainer(Rc<RefCell<dyn Shape>>);
