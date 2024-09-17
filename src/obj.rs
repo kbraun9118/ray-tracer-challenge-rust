@@ -22,11 +22,7 @@ fn fan_triangulation(verticies: Vec<Tuple>) -> Vec<Triangle> {
     let mut triangles = vec![];
 
     for i in 1..(verticies.len() - 1) {
-        let tri = Triangle::new(
-            verticies[0],
-            verticies[i],
-            verticies[i + 1],
-        );
+        let tri = Triangle::new(verticies[0], verticies[i], verticies[i + 1]);
         triangles.push(tri);
     }
     triangles
@@ -102,6 +98,8 @@ impl OBJParser {
 
 #[cfg(test)]
 mod tests {
+
+    use crate::shape::Shape;
 
     use super::*;
 
