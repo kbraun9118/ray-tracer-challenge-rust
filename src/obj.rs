@@ -4,6 +4,8 @@ use std::{
     path::Path,
 };
 
+use indicatif::{ProgressBar, ProgressStyle};
+
 use crate::{
     error::RayTraceResult,
     shape::{
@@ -32,11 +34,18 @@ impl OBJParser {
     pub fn parse_file<T: AsRef<Path>>(path: T) -> RayTraceResult<Self> {
         let file_string = fs::read_to_string(path)?;
         let mut verticies = vec![];
-        let default_group = GroupContainer::from(Group::new());
+        // let default_group = GroupContainer::from(Group::new());
         let mut current_group: Option<String> = None;
         let mut groups: HashMap<String, Vec<Triangle>> = HashMap::new();
+        let lines = file_string.lines().collect::<Vec<_>>();
+        let pb = ProgressBar::new(lines.len() as u64);
+        pb.set_style(ProgressStyle::with_template("{wide_bar} {percent}% {eta} {msg}").unwrap());
 
         for line in file_string.lines() {
+            pb.inc(1);
+            if line.is_empty() {
+                continue;
+            }
             match &line[..1] {
                 "v" => {
                     let input: Vec<_> = line[2..].split_whitespace().collect();
@@ -57,7 +66,6 @@ impl OBJParser {
                             .and_modify(|e| e.append(&mut triangles))
                             .or_insert(triangles);
                     } else {
-                        println!("Adding to default_group");
                         for triangle in triangles {
                             default_group.add_child(triangle.into());
                         }
@@ -69,6 +77,7 @@ impl OBJParser {
                 _ => {}
             }
         }
+        pb.finish_with_message(format!("Finished importing"));
         Ok(Self {
             // verticies,
             groups,
