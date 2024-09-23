@@ -27,8 +27,14 @@ impl Ray {
 
     pub fn intersections(&self, shape: ShapeContainer) -> IntersectionHeap {
         let mut heap = IntersectionHeap::new();
-        for i in shape.borrow().intersects(*self) {
-            heap.push(ShapeIntersection::new(i.t(), shape.clone(), i.object()));
+        for i in shape.read().unwrap().intersects(*self) {
+            heap.push(ShapeIntersection::new_with_uv(
+                i.t(),
+                shape.clone(),
+                i.object(),
+                i.u(),
+                i.v(),
+            ));
         }
         heap
     }

@@ -1,5 +1,5 @@
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
 };
@@ -81,7 +81,12 @@ impl Shape for Sphere {
         self.material = material;
     }
 
-    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: Uuid,
+        point: Tuple,
+        _intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         if id == self.id {
             Some(point - Tuple::origin())
         } else {
@@ -113,6 +118,8 @@ impl From<Transformation> for Sphere {
 #[cfg(test)]
 mod tests {
     use std::f64::consts::PI;
+
+    use crate::shape::ShapeContainer;
 
     use super::*;
 
@@ -202,32 +209,50 @@ mod tests {
 
     #[test]
     fn the_normal_on_a_sphere_at_a_point_on_the_x_axis() {
-        let s = Sphere::new();
-        let n = s.normal_at(s.id(), Tuple::point(1.0, 0.0, 0.0)).unwrap();
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(0.0, s.clone(), s.read().unwrap().id());
+        let n = s
+            .read()
+            .unwrap()
+            .normal_at(s.read().unwrap().id(), Tuple::point(1.0, 0.0, 0.0), i)
+            .unwrap();
 
         assert_eq!(Tuple::vector(1.0, 0.0, 0.0), n);
     }
 
     #[test]
     fn the_normal_on_a_sphere_at_a_point_on_the_y_axis() {
-        let s = Sphere::new();
-        let n = s.normal_at(s.id(), Tuple::point(0.0, 1.0, 0.0)).unwrap();
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(0.0, s.clone(), s.read().unwrap().id());
+        let n = s
+            .read()
+            .unwrap()
+            .normal_at(s.read().unwrap().id(), Tuple::point(0.0, 1.0, 0.0), i)
+            .unwrap();
 
         assert_eq!(Tuple::vector(0.0, 1.0, 0.0), n);
     }
 
     #[test]
     fn the_normal_on_a_sphere_at_a_point_on_the_z_axis() {
-        let s = Sphere::new();
-        let n = s.normal_at(s.id(), Tuple::point(0.0, 0.0, 1.0)).unwrap();
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(0.0, s.clone(), s.read().unwrap().id());
+        let n = s
+            .read()
+            .unwrap()
+            .normal_at(s.read().unwrap().id(), Tuple::point(0.0, 0.0, 1.0), i)
+            .unwrap();
 
         assert_eq!(Tuple::vector(0.0, 0.0, 1.0), n);
     }
 
     #[test]
     fn the_normal_on_a_sphere_at_a_nonaxial_point() {
-        let s = Sphere::new();
+        let s = ShapeContainer::from(Sphere::new());
+        let i = ShapeIntersection::new(0.0, s.clone(), s.read().unwrap().id());
         let n = s
+            .read()
+            .unwrap()
             .normal_at(
                 s.id(),
                 Tuple::point(
@@ -235,6 +260,7 @@ mod tests {
                     3.0f64.sqrt() / 3.0,
                     3.0f64.sqrt() / 3.0,
                 ),
+                i,
             )
             .unwrap();
 
@@ -250,10 +276,15 @@ mod tests {
 
     #[test]
     fn computing_the_normal_on_a_translated_sphere() {
-        let s = Sphere::from(Transformation::identity().translation(0.0, 1.0, 0.0));
+        let s = ShapeContainer::from(Sphere::from(
+            Transformation::identity().translation(0.0, 1.0, 0.0),
+        ));
+        let i = ShapeIntersection::new(0.0, s.clone(), s.read().unwrap().id());
 
         let n = s
-            .normal_at(s.id(), Tuple::point(0.0, 1.70711, -0.70711))
+            .read()
+            .unwrap()
+            .normal_at(s.id(), Tuple::point(0.0, 1.70711, -0.70711), i)
             .unwrap();
 
         assert_eq!(Tuple::vector(0.0, 0.70711, -0.70711), n);
@@ -261,16 +292,20 @@ mod tests {
 
     #[test]
     fn computing_the_normal_on_a_transformed_sphere() {
-        let s = Sphere::from(
+        let s = ShapeContainer::from(Sphere::from(
             Transformation::identity()
                 .rotate_z(PI / 5.0)
                 .scale(1.0, 0.5, 1.0),
-        );
+        ));
+        let i = ShapeIntersection::new(0.0, s.clone(), s.read().unwrap().id());
 
         let n = s
+            .read()
+            .unwrap()
             .normal_at(
                 s.id(),
                 Tuple::point(0.0, 2.0f64.sqrt() / 2.0, -2f64.sqrt() / 2.0),
+                i,
             )
             .unwrap();
 

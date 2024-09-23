@@ -1,12 +1,13 @@
+pub mod camera;
 pub mod canvas;
 pub mod color;
 pub mod error;
 pub mod intersection;
 pub mod matrix;
+pub mod obj;
+pub mod point_light;
+pub mod shape;
 pub mod transformation;
 pub mod tuple;
-pub mod point_light;
-pub mod world;
-pub mod camera;
-pub mod shape;
 pub(crate) mod util;
+pub mod world;

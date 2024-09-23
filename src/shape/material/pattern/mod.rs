@@ -13,7 +13,7 @@ pub trait Pattern: Debug {
     fn transformation(&self) -> Transformation;
 
     fn color_at_object(&self, shape: ShapeContainer, point: Tuple) -> Color {
-        let object_point = shape.borrow().transformation().inverse().unwrap() * point;
+        let object_point = shape.read().unwrap().transformation().inverse().unwrap() * point;
         let pattern_point = self.transformation().inverse().unwrap() * object_point;
         self.color_at(pattern_point)
     }

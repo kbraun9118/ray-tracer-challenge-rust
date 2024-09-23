@@ -13,11 +13,27 @@ pub mod ray;
 pub struct Intersection {
     t: f64,
     object: uuid::Uuid,
+    u: Option<f64>,
+    v: Option<f64>,
 }
 
 impl Intersection {
     pub fn new(t: f64, object: uuid::Uuid) -> Self {
-        Self { t, object }
+        Self {
+            t,
+            object,
+            u: None,
+            v: None,
+        }
+    }
+
+    pub fn new_with_uv(t: f64, object: uuid::Uuid, u: f64, v: f64) -> Self {
+        Self {
+            t,
+            object,
+            u: Some(u),
+            v: Some(v),
+        }
     }
 
     pub fn t(&self) -> f64 {
@@ -26,6 +42,14 @@ impl Intersection {
 
     pub fn object(&self) -> uuid::Uuid {
         self.object.clone()
+    }
+
+    pub fn u(&self) -> Option<f64> {
+        self.u
+    }
+
+    pub fn v(&self) -> Option<f64> {
+        self.v
     }
 }
 
@@ -59,6 +83,8 @@ pub struct ShapeIntersection {
     t: f64,
     object: ShapeContainer,
     object_id: Uuid,
+    u: Option<f64>,
+    v: Option<f64>,
 }
 
 impl ShapeIntersection {
@@ -67,6 +93,24 @@ impl ShapeIntersection {
             t,
             object,
             object_id,
+            u: None,
+            v: None,
+        }
+    }
+
+    pub fn new_with_uv(
+        t: f64,
+        object: ShapeContainer,
+        object_id: Uuid,
+        u: Option<f64>,
+        v: Option<f64>,
+    ) -> Self {
+        Self {
+            t,
+            object,
+            object_id,
+            u,
+            v,
         }
     }
 
@@ -80,6 +124,14 @@ impl ShapeIntersection {
 
     pub fn object_id(&self) -> Uuid {
         self.object_id
+    }
+
+    pub fn u(&self) -> Option<f64> {
+        self.u
+    }
+
+    pub fn v(&self) -> Option<f64> {
+        self.v
     }
 }
 

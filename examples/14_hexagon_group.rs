@@ -60,7 +60,7 @@ fn hexagon(material: Material) -> GroupContainer {
 
     for n in 0..=5 {
         let side = hexagon_side(material.clone());
-        side.borrow_mut().set_transformation(
+        side.write().unwrap().set_transformation(
             Transformation::identity()
                 .rotate_y((n as f64) * f64::consts::PI / 3.0)
                 .translation(0.0, 0.5, 0.0),

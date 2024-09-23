@@ -25,8 +25,9 @@ impl PrepComputations {
         let point = ray.position(intersection.t());
         let mut normal_v = intersection
             .object()
-            .borrow()
-            .normal_at(intersection.object_id(), point)
+            .read()
+            .unwrap()
+            .normal_at(intersection.object_id(), point, intersection.clone())
             .unwrap();
         let eye_v = -ray.direction();
         let mut inside = false;
@@ -43,7 +44,12 @@ impl PrepComputations {
         for i in xs.iter() {
             if i == &intersection {
                 if let Some((last, last_id)) = containers.last() {
-                    n1 = last.borrow().material(*last_id).unwrap().refractive_index()
+                    n1 = last
+                        .read()
+                        .unwrap()
+                        .material(*last_id)
+                        .unwrap()
+                        .refractive_index()
                 } else {
                     n1 = 1.0
                 }
@@ -51,16 +57,22 @@ impl PrepComputations {
 
             if containers
                 .iter()
-                .any(|(c, _)| c.borrow().id() == i.object().borrow().id())
+                .any(|(c, _)| c.read().unwrap().id() == i.object().read().unwrap().id())
             {
-                containers.retain(|(c, _)| c.borrow().id() != i.object().borrow().id());
+                containers
+                    .retain(|(c, _)| c.read().unwrap().id() != i.object().read().unwrap().id());
             } else {
                 containers.push((i.object().clone(), i.object_id()));
             }
 
             if i == &intersection {
                 if let Some((last, last_id)) = containers.last() {
-                    n2 = last.borrow().material(*last_id).unwrap().refractive_index()
+                    n2 = last
+                        .read()
+                        .unwrap()
+                        .material(*last_id)
+                        .unwrap()
+                        .refractive_index()
                 } else {
                     n2 = 1.0
                 }
@@ -173,7 +185,10 @@ mod tests {
         let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert_eq!(i.t(), comps.t());
-        assert_eq!(i.object().borrow().id(), comps.object().borrow().id());
+        assert_eq!(
+            i.object().read().unwrap().id(),
+            comps.object().read().unwrap().id()
+        );
         assert_eq!(Tuple::point(0.0, 0.0, -1.0), comps.point());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.eye_v());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.normal_v());
@@ -189,7 +204,10 @@ mod tests {
         let comps = PrepComputations::new(i.clone(), r, &mut IntersectionHeap::new());
 
         assert_eq!(i.t(), comps.t());
-        assert_eq!(i.object().borrow().id(), comps.object().borrow().id());
+        assert_eq!(
+            i.object().read().unwrap().id(),
+            comps.object().read().unwrap().id()
+        );
         assert_eq!(Tuple::point(0.0, 0.0, 1.0), comps.point());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.eye_v());
         assert_eq!(Tuple::vector(0.0, 0.0, -1.0), comps.normal_v());
@@ -254,7 +272,7 @@ mod tests {
             (6.0, a.clone()),
         ]
         .into_iter()
-        .map(|(t, obj)| ShapeIntersection::new(t, obj.clone(), obj.borrow().id()))
+        .map(|(t, obj)| ShapeIntersection::new(t, obj.clone(), obj.read().unwrap().id()))
         .collect::<IntersectionHeap>();
 
         let ns = vec![

@@ -1,4 +1,7 @@
-use std::{f64::{INFINITY, NEG_INFINITY}, mem::swap};
+use std::{
+    f64::{INFINITY, NEG_INFINITY},
+    mem::swap,
+};
 
 use crate::{intersection::ray::Ray, transformation::Transformation, tuple::Tuple, util};
 
@@ -38,9 +41,24 @@ impl BoundedBox {
     }
 
     pub(crate) fn intersects(&self, ray: Ray) -> bool {
-        let (xtmin, xtmax) = check_axis(ray.origin().x(), ray.direction().x(), self.min.x(), self.max.x());
-        let (ytmin, ytmax) = check_axis(ray.origin().y(), ray.direction().y(), self.min.y(), self.max.y());
-        let (ztmin, ztmax) = check_axis(ray.origin().z(), ray.direction().z(), self.min.z(), self.max.z());
+        let (xtmin, xtmax) = check_axis(
+            ray.origin().x(),
+            ray.direction().x(),
+            self.min.x(),
+            self.max.x(),
+        );
+        let (ytmin, ytmax) = check_axis(
+            ray.origin().y(),
+            ray.direction().y(),
+            self.min.y(),
+            self.max.y(),
+        );
+        let (ztmin, ztmax) = check_axis(
+            ray.origin().z(),
+            ray.direction().z(),
+            self.min.z(),
+            self.max.z(),
+        );
 
         let tmin = xtmin.max(ytmin).max(ztmin);
         let tmax = xtmax.min(ytmax).min(ztmax);
@@ -60,7 +78,7 @@ impl BoundedBox {
     //     self.max
     // }
 
-    fn add_point(&mut self, point: Tuple) {
+    pub(crate) fn add_point(&mut self, point: Tuple) {
         self.min = Tuple::point(
             self.min.x().min(point.x()),
             self.min.y().min(point.y()),
@@ -271,7 +289,7 @@ mod test {
         shape.add_child(s.into());
         shape.add_child(c.into());
 
-        let bounds = shape.borrow().bounds();
+        let bounds = shape.read().unwrap().bounds();
 
         assert_eq!(bounds.min, Tuple::point(-4.5, -3.0, -5.0));
         assert_eq!(bounds.max, Tuple::point(4.0, 7.0, 4.5));
@@ -280,19 +298,71 @@ mod test {
     #[test]
     fn intersecting_a_ray_with_a_bounding_box_at_the_origin() {
         let exs = vec![
-            (Tuple::point(5.0, 0.5, 0.0), Tuple::vector(-1.0, 0.0, 0.0), true),
-            (Tuple::point(-5.0, 0.5, 0.0), Tuple::vector(1.0, 0.0, 0.0), true),
-            (Tuple::point(0.5, 5.0, 0.0), Tuple::vector(0.0, -1.0, 0.0), true),
-            (Tuple::point(0.5, -5.0, 0.0), Tuple::vector(0.0, 1.0, 0.0), true),
-            (Tuple::point(0.5, 0.0, 5.0), Tuple::vector(0.0, 0.0, -1.0), true),
-            (Tuple::point(0.5, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0), true),
-            (Tuple::point(0.0, 0.5, 0.0), Tuple::vector(0.0, 0.0, 1.0), true),
-            (Tuple::point(-2.0, 0.0, 0.0), Tuple::vector(2.0, 4.0, 6.0), false),
-            (Tuple::point(0.0, -2.0, 0.0), Tuple::vector(6.0, 2.0, 4.0), false),
-            (Tuple::point(0.0, 0.0, -2.0), Tuple::vector(4.0, 6.0, 2.0), false),
-            (Tuple::point(2.0, 0.0, 2.0), Tuple::vector(0.0, 0.0, -1.0), false),
-            (Tuple::point(0.0, 2.0, 2.0), Tuple::vector(0.0, -1.0, 0.0), false),
-            (Tuple::point(2.0, 2.0, 0.0), Tuple::vector(-1.0, 0.0, 0.0), false),
+            (
+                Tuple::point(5.0, 0.5, 0.0),
+                Tuple::vector(-1.0, 0.0, 0.0),
+                true,
+            ),
+            (
+                Tuple::point(-5.0, 0.5, 0.0),
+                Tuple::vector(1.0, 0.0, 0.0),
+                true,
+            ),
+            (
+                Tuple::point(0.5, 5.0, 0.0),
+                Tuple::vector(0.0, -1.0, 0.0),
+                true,
+            ),
+            (
+                Tuple::point(0.5, -5.0, 0.0),
+                Tuple::vector(0.0, 1.0, 0.0),
+                true,
+            ),
+            (
+                Tuple::point(0.5, 0.0, 5.0),
+                Tuple::vector(0.0, 0.0, -1.0),
+                true,
+            ),
+            (
+                Tuple::point(0.5, 0.0, -5.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                true,
+            ),
+            (
+                Tuple::point(0.0, 0.5, 0.0),
+                Tuple::vector(0.0, 0.0, 1.0),
+                true,
+            ),
+            (
+                Tuple::point(-2.0, 0.0, 0.0),
+                Tuple::vector(2.0, 4.0, 6.0),
+                false,
+            ),
+            (
+                Tuple::point(0.0, -2.0, 0.0),
+                Tuple::vector(6.0, 2.0, 4.0),
+                false,
+            ),
+            (
+                Tuple::point(0.0, 0.0, -2.0),
+                Tuple::vector(4.0, 6.0, 2.0),
+                false,
+            ),
+            (
+                Tuple::point(2.0, 0.0, 2.0),
+                Tuple::vector(0.0, 0.0, -1.0),
+                false,
+            ),
+            (
+                Tuple::point(0.0, 2.0, 2.0),
+                Tuple::vector(0.0, -1.0, 0.0),
+                false,
+            ),
+            (
+                Tuple::point(2.0, 2.0, 0.0),
+                Tuple::vector(-1.0, 0.0, 0.0),
+                false,
+            ),
         ];
         let bbox = BoundedBox::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0));
 

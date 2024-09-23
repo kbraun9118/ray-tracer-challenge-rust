@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, rc::Rc};
+use std::{borrow::BorrowMut, sync::Arc};
 
 use crate::{
     color::{Color, Colors},
@@ -22,7 +22,7 @@ pub struct Material {
     reflective: f64,
     transparency: f64,
     refractive_index: f64,
-    pattern: Rc<dyn Pattern>,
+    pattern: Arc<dyn Pattern + Send + Sync>,
 }
 
 impl Material {
@@ -63,7 +63,7 @@ impl Material {
     }
 
     pub fn with_color(mut self, color: Color) -> Self {
-        self.pattern = Rc::new(SolidPattern::new(color));
+        self.pattern = Arc::new(SolidPattern::new(color));
         self
     }
 
@@ -102,8 +102,8 @@ impl Material {
         self
     }
 
-    pub fn with_pattern<T: Pattern + 'static>(mut self, pattern: T) -> Self {
-        self.pattern = Rc::new(pattern);
+    pub fn with_pattern<T: Pattern + Send + Sync + 'static >(mut self, pattern: T) -> Self {
+        self.pattern = Arc::new(pattern);
         self
     }
 
@@ -173,7 +173,7 @@ impl Material {
 impl Default for Material {
     fn default() -> Self {
         Self {
-            pattern: Rc::new(SolidPattern::new(Colors::White.into())),
+            pattern: Arc::new(SolidPattern::new(Colors::White.into())),
             ambient: 0.1,
             diffuse: 0.9,
             specular: 0.9,

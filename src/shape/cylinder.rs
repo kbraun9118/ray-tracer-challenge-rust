@@ -3,7 +3,7 @@ use std::mem::swap;
 use uuid::Uuid;
 
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
     util::{eq_f64, EPSILON},
@@ -150,7 +150,12 @@ impl Shape for Cylinder {
         self.material = material;
     }
 
-    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: Uuid,
+        point: Tuple,
+        _intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         if self.id != id {
             return None;
         }
@@ -184,7 +189,7 @@ impl Shape for Cylinder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{intersection::ray::Ray, tuple::Tuple};
+    use crate::{intersection::ray::Ray, shape::ShapeContainer, tuple::Tuple};
 
     use super::*;
 
@@ -249,9 +254,13 @@ mod tests {
             (Tuple::point(-1.0, 1.0, 0.0), Tuple::vector(-1.0, 0.0, 0.0)),
         ];
 
-        let cyl = Cylinder::new();
+        let cyl = ShapeContainer::from(Cylinder::new());
+        let i = ShapeIntersection::new(0.0, cyl.clone(), cyl.read().unwrap().id());
         for (point, normal) in exs {
-            let n = cyl.local_normal_at(cyl.id(), point).unwrap();
+            let n = cyl
+                .read().unwrap()
+                .local_normal_at(cyl.id(), point, i.clone())
+                .unwrap();
             assert_eq!(n, normal);
         }
     }
@@ -350,9 +359,11 @@ mod tests {
         cyl.set_minimum(1.0);
         cyl.set_maximum(2.0);
         cyl.set_closed(true);
+        let cyl = ShapeContainer::from(cyl);
+        let i = ShapeIntersection::new(0.0, cyl.clone(), cyl.read().unwrap().id());
 
         for (point, normal) in exs {
-            let n = cyl.local_normal_at(cyl.id(), point).unwrap();
+            let n = cyl.read().unwrap().local_normal_at(cyl.id(), point, i.clone()).unwrap();
             assert_eq!(n, normal);
         }
     }

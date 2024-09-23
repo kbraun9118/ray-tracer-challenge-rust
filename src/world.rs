@@ -68,7 +68,8 @@ impl World {
         if let Some(light) = self.light {
             let surface = comps
                 .object()
-                .borrow()
+                .read()
+                .unwrap()
                 .material(comps.object_id())
                 .unwrap_or_default()
                 .lighting(
@@ -83,7 +84,12 @@ impl World {
             let reflected = self.reflected_color(comps, remaining);
             let refracted = self.refracted_color(comps, remaining);
 
-            let material = comps.object().borrow().material(comps.object_id()).unwrap();
+            let material = comps
+                .object()
+                .read()
+                .unwrap()
+                .material(comps.object_id())
+                .unwrap();
             if material.reflective() > 0.0 && material.transparency() > 0.0 {
                 let reflectance = comps.schlick();
                 return surface + reflected * reflectance + refracted * (1.0 - reflectance);
@@ -135,7 +141,8 @@ impl World {
             || eq_f64(
                 comps
                     .object()
-                    .borrow()
+                    .read()
+                    .unwrap()
                     .material(comps.object_id())
                     .unwrap()
                     .reflective(),
@@ -151,7 +158,8 @@ impl World {
         color
             * comps
                 .object()
-                .borrow()
+                .read()
+                .unwrap()
                 .material(comps.object_id())
                 .unwrap()
                 .reflective()
@@ -162,7 +170,8 @@ impl World {
             || eq_f64(
                 comps
                     .object()
-                    .borrow()
+                    .read()
+                    .unwrap()
                     .material(comps.object_id())
                     .unwrap()
                     .transparency(),
@@ -185,7 +194,8 @@ impl World {
         self.color_at_recursive(refract_ray, remaining - 1)
             * comps
                 .object()
-                .borrow()
+                .read()
+                .unwrap()
                 .material(comps.object_id())
                 .unwrap()
                 .transparency()
@@ -252,9 +262,10 @@ mod tests {
         assert!(world
             .shapes()
             .iter()
-            .any(|i| i.borrow().transformation() == s1_transformation));
+            .any(|i| i.read().unwrap().transformation() == s1_transformation));
         assert!(world.shapes().iter().any(|i| i
-            .borrow()
+            .read()
+            .unwrap()
             .material(world.shapes()[0].id())
             .unwrap()
             == s2_material));
@@ -330,12 +341,14 @@ mod tests {
         w.shapes()
             .get(0)
             .unwrap()
-            .borrow_mut()
+            .write()
+            .unwrap()
             .set_material(Material::default().with_ambient(1.0));
         w.shapes()
             .get(1)
             .unwrap()
-            .borrow_mut()
+            .write()
+            .unwrap()
             .set_material(Material::default().with_ambient(1.0));
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.75), Tuple::vector(0.0, 0.0, -1.0));
 
@@ -344,7 +357,8 @@ mod tests {
             c,
             w.shapes()[1]
                 .clone()
-                .borrow()
+                .read()
+                .unwrap()
                 .material(w.shapes()[1].id())
                 .unwrap()
                 .pattern()
@@ -411,12 +425,13 @@ mod tests {
 
     #[test]
     fn the_reflected_color_for_a_nonreflective_material() {
-        let mut w = World::default();
+        let w = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
-        w.shapes_mut()
-            .get_mut(1)
+        w.shapes()
+            .get(1)
             .unwrap()
-            .borrow_mut()
+            .write()
+            .unwrap()
             .set_material(Material::new().with_ambient(1.0));
         let i = ShapeIntersection::new(1.0, w.shapes()[1].clone(), w.shapes()[1].id());
         let comps = PrepComputations::new(i, r, &IntersectionHeap::new());
@@ -506,10 +521,10 @@ mod tests {
 
     #[test]
     fn the_refracted_color_at_the_maximum_recursive_depth() {
-        let mut w = World::default();
-        let shape = w.shapes_mut().get_mut(0).unwrap();
+        let w = World::default();
+        let shape = w.shapes().get(0).unwrap();
 
-        shape.borrow_mut().set_material(
+        shape.write().unwrap().set_material(
             Material::default()
                 .with_transparency(1.0)
                 .with_reflective(1.5),
@@ -528,9 +543,9 @@ mod tests {
 
     #[test]
     fn the_refracted_color_under_total_internal_reflection() {
-        let mut w = World::default();
-        let shape = w.shapes_mut().get_mut(0).unwrap();
-        shape.borrow_mut().set_material(
+        let w = World::default();
+        let shape = w.shapes().get(0).unwrap();
+        shape.write().unwrap().set_material(
             Material::default()
                 .with_transparency(1.0)
                 .with_refractive_index(1.5),
@@ -553,12 +568,12 @@ mod tests {
     #[test]
     fn the_refracted_color_with_a_refracted_ray() {
         let w = World::default();
-        w.shapes().get(0).unwrap().borrow_mut().set_material(
+        w.shapes().get(0).unwrap().write().unwrap().set_material(
             Material::new()
                 .with_ambient(1.0)
                 .with_pattern(TestPattern::default()),
         );
-        w.shapes().get(1).unwrap().borrow_mut().set_material(
+        w.shapes().get(1).unwrap().write().unwrap().set_material(
             Material::new()
                 .with_transparency(1.0)
                 .with_refractive_index(1.5),
@@ -608,7 +623,7 @@ mod tests {
             2f64.sqrt(),
             w.shapes()
                 .iter()
-                .find(|s| s.borrow().id() == floor_id)
+                .find(|s| s.read().unwrap().id() == floor_id)
                 .unwrap()
                 .clone(),
             floor_id

@@ -3,7 +3,7 @@ use std::mem::swap;
 use uuid::Uuid;
 
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
     util::{eq_f64, EPSILON},
@@ -159,7 +159,12 @@ impl Shape for Cone {
         self.material = material;
     }
 
-    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: Uuid,
+        point: Tuple,
+        _intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         if self.id != id {
             return None;
         }
@@ -204,7 +209,7 @@ impl Shape for Cone {
 
 #[cfg(test)]
 mod tests {
-    use crate::tuple::Tuple;
+    use crate::{shape::ShapeContainer, tuple::Tuple};
 
     use super::*;
 
@@ -300,11 +305,16 @@ mod tests {
             (Tuple::point(-1.0, -1.0, 0.0), Tuple::vector(-1.0, 1.0, 0.0)),
         ];
         let shape = Cone::new();
+        let shape = ShapeContainer::from(shape);
+        let i = ShapeIntersection::new(0.0, shape.clone(), shape.read().unwrap().id());
 
         for (point, normal) in exs {
-            let n = shape.local_normal_at(shape.id(), point).unwrap();
+            let n = shape
+                .read()
+                .unwrap()
+                .local_normal_at(shape.read().unwrap().id(), point, i.clone())
+                .unwrap();
             assert_eq!(n, normal);
         }
     }
-
 }

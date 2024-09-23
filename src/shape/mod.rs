@@ -2,9 +2,17 @@ use bounded_box::BoundedBox;
 use group::WeakGroupContainer;
 use uuid::Uuid;
 
-use std::{cell::RefCell, fmt::Debug, ops::Deref, rc::Rc};
+use std::{
+    fmt::Debug,
+    ops::Deref,
+    sync::{Arc, RwLock},
+};
 
-use crate::{intersection::Intersection, transformation::Transformation, tuple::Tuple};
+use crate::{
+    intersection::{Intersection, ShapeIntersection},
+    transformation::Transformation,
+    tuple::Tuple,
+};
 
 use self::material::Material;
 
@@ -17,25 +25,27 @@ pub mod cylinder;
 pub mod group;
 pub mod material;
 pub mod plane;
+pub mod smooth_triangle;
 pub mod sphere;
+pub mod triangle;
 
 #[derive(Debug, Clone)]
-pub struct ShapeContainer(Rc<RefCell<dyn Shape>>);
+pub struct ShapeContainer(Arc<RwLock<dyn Shape + Sync + Send>>);
 
 impl ShapeContainer {
     pub fn id(&self) -> Uuid {
-        self.borrow().id()
+        self.read().unwrap().id()
     }
 }
 
-impl<T: Shape + 'static> From<T> for ShapeContainer {
+impl<T: Shape + Sync + Send + 'static> From<T> for ShapeContainer {
     fn from(value: T) -> Self {
-        ShapeContainer(Rc::new(RefCell::new(value)))
+        ShapeContainer(Arc::new(RwLock::new(value)))
     }
 }
 
 impl Deref for ShapeContainer {
-    type Target = Rc<RefCell<dyn Shape>>;
+    type Target = Arc<RwLock<dyn Shape + Sync + Send>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -55,7 +65,12 @@ pub trait Shape: Debug {
     fn set_transformation(&mut self, transformation: Transformation);
     fn material(&self, id: Uuid) -> Option<Material>;
     fn set_material(&mut self, material: Material);
-    fn local_normal_at(&self, id: uuid::Uuid, point: Tuple) -> Option<Tuple>;
+    fn local_normal_at(
+        &self,
+        id: uuid::Uuid,
+        point: Tuple,
+        intersection: ShapeIntersection,
+    ) -> Option<Tuple>;
     fn parent(&self) -> Option<WeakGroupContainer>;
     fn set_parent(&mut self, parent: WeakGroupContainer);
     fn bounds(&self) -> BoundedBox;
@@ -65,16 +80,26 @@ pub trait Shape: Debug {
         self.local_intersect(ray)
     }
 
-    fn normal_at(&self, id: uuid::Uuid, point: Tuple) -> Option<Tuple> {
+    fn normal_at(
+        &self,
+        id: uuid::Uuid,
+        point: Tuple,
+        intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         let local_point = self.world_to_object(point);
-        self.local_normal_at(id, local_point)
+        self.local_normal_at(id, local_point, intersection)
             .map(|local_normal| self.normal_to_world(local_normal))
     }
 
     fn world_to_object(&self, point: Tuple) -> Tuple {
         let mut point = point;
         if let Some(parent) = self.parent() {
-            point = parent.upgrade().unwrap().borrow().world_to_object(point);
+            point = parent
+                .upgrade()
+                .unwrap()
+                .read()
+                .unwrap()
+                .world_to_object(point);
         }
 
         self.transformation()
@@ -95,7 +120,7 @@ pub trait Shape: Debug {
 
         if let Some(parent) = self.parent() {
             let parent = parent.upgrade().unwrap();
-            normal = parent.borrow().normal_to_world(normal);
+            normal = parent.read().unwrap().normal_to_world(normal);
         }
 
         normal
@@ -173,7 +198,12 @@ mod tests {
             self.material = material;
         }
 
-        fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+        fn local_normal_at(
+            &self,
+            id: Uuid,
+            point: Tuple,
+            _intersection: ShapeIntersection,
+        ) -> Option<Tuple> {
             if id != self.id {
                 None
             } else {
@@ -249,8 +279,16 @@ mod tests {
                 .translation(0.0, 1.0, 0.0)
                 .clone(),
         );
+        let shape = ShapeContainer::from(shape);
+
         let normal = shape
-            .normal_at(shape.id(), Tuple::point(0.0, 1.70711, -0.70711))
+            .read()
+            .unwrap()
+            .normal_at(
+                shape.id(),
+                Tuple::point(0.0, 1.70711, -0.70711),
+                ShapeIntersection::new(0.0, shape.clone(), shape.read().unwrap().id()),
+            )
             .unwrap();
 
         assert_eq!(normal, Tuple::vector(0.0, 0.70711, -0.70711));
@@ -277,7 +315,10 @@ mod tests {
         let g1 = GroupContainer::from(g1);
         g1.add_child(g2.into());
 
-        let p = s.borrow().world_to_object(Tuple::point(-2.0, 0.0, -10.0));
+        let p = s
+            .read()
+            .unwrap()
+            .world_to_object(Tuple::point(-2.0, 0.0, -10.0));
 
         assert_eq!(p, Tuple::point(0.0, 0.0, -1.0));
     }
@@ -296,7 +337,7 @@ mod tests {
         g2.add_child(s.clone());
         g1.add_child(g2.into());
 
-        let n = s.borrow().normal_to_world(Tuple::vector(
+        let n = s.read().unwrap().normal_to_world(Tuple::vector(
             3f64.sqrt() / 3.0,
             3f64.sqrt() / 3.0,
             3f64.sqrt() / 3.0,
@@ -318,10 +359,12 @@ mod tests {
         let g2 = GroupContainer::from(g2);
         g2.add_child(s.clone());
         g1.add_child(g2.into());
+        let i = ShapeIntersection::new(0.0, s.clone(), g1.read().unwrap().id());
 
         let n = s
-            .borrow()
-            .normal_at(s.id(), Tuple::point(1.7321, 1.1547, -5.5774))
+            .read()
+            .unwrap()
+            .normal_at(s.id(), Tuple::point(1.7321, 1.1547, -5.5774), i)
             .unwrap();
 
         assert_eq!(n, Tuple::vector(0.28570, 0.42854, -0.85716));
