@@ -1,4 +1,5 @@
 use core::f64;
+use std::f64::consts::PI;
 
 use ray_tracer_challenge::{
     camera::Camera,
@@ -18,21 +19,20 @@ use ray_tracer_challenge::{
 };
 
 fn teapot() -> RayTraceResult<GroupContainer> {
-    OBJParser::parse_file("./examples/objs/15_teapot.obj").map(|p| p.as_group())
+    OBJParser::parse_file("./examples/objs/15_teapot_low_res.obj").map(|p| p.as_group())
 }
 
 fn main() -> RayTraceResult<()> {
     let mut world = World::new();
-    world.add_shape(teapot()?.into());
+    let teapot = teapot()?;
+    let scale = 1.0 / 5.0;
+    teapot.write().unwrap().set_transformation(
+        Transformation::identity()
+            .scale(scale, scale, scale)
+            .rotate_x(-PI / 2.0),
+    );
 
-    // let mut sphere = Sphere::new();
-    // sphere.set_material(
-    //     Material::default()
-    //         .with_transparency(1.0)
-    //         .with_reflective(1.0)
-    //         .with_refractive_index(1.52),
-    // );
-    // world.add_shape(sphere.into());
+    world.add_shape(teapot.into());
 
     world.set_light(PointLight::new(
         Tuple::point(-10.0, 10.0, -10.0),
@@ -62,6 +62,6 @@ fn main() -> RayTraceResult<()> {
         Tuple::vector(0.0, 1.0, 0.0),
     ));
 
-    camera.render(&world).save("hexagon")?;
+    camera.render(&world).save("teapot")?;
     Ok(())
 }

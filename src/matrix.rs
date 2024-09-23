@@ -1,6 +1,6 @@
 use std::{
-    cell::RefCell,
     ops::{Index, IndexMut, Mul},
+    sync::{Arc, RwLock},
     vec,
 };
 
@@ -10,7 +10,7 @@ use crate::{tuple::Tuple, util::eq_f64};
 pub struct Matrix {
     width: usize,
     value: Vec<f64>,
-    det: RefCell<Option<f64>>,
+    det: Arc<RwLock<Option<f64>>>,
 }
 
 impl Matrix {
@@ -18,7 +18,7 @@ impl Matrix {
         Matrix {
             width,
             value: vec![f64::default(); width * height],
-            det: RefCell::new(None),
+            det: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -62,12 +62,12 @@ impl Matrix {
                 .map(|c| self.column(c))
                 .flat_map(|c| c.into_iter())
                 .collect(),
-            det: RefCell::new(None),
+            det: Arc::new(RwLock::new(None)),
         }
     }
 
     fn determinate(&self) -> f64 {
-        if let Some(det) = *self.det.borrow() {
+        if let Some(det) = *self.det.read().unwrap() {
             return det;
         }
         let mut det = 0.0;
@@ -78,7 +78,7 @@ impl Matrix {
                 det += self[(0, col)] * self.cofactor(0, col);
             }
         }
-        self.det.replace(Some(det));
+        *self.det.write().unwrap() = Some(det);
         det
     }
 
@@ -145,7 +145,7 @@ impl From<Vec<Vec<f64>>> for Matrix {
         Matrix {
             width: value[0].len(),
             value: value.into_iter().flat_map(|r| r).collect(),
-            det: RefCell::new(None),
+            det: Arc::new(RwLock::new(None)),
         }
     }
 }

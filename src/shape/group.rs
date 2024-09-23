@@ -1,13 +1,12 @@
 use std::{
-    cell::RefCell,
     ops::Deref,
-    rc::{Rc, Weak},
+    sync::{Arc, RwLock, Weak},
 };
 
 use uuid::Uuid;
 
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
 };
@@ -49,7 +48,7 @@ impl Shape for Group {
         let mut xs = vec![];
         if self.bounding_box.intersects(ray) {
             for shape in &self.shapes {
-                let mut shape_xs = shape.borrow().intersects(ray);
+                let mut shape_xs = shape.read().unwrap().intersects(ray);
                 xs.append(&mut shape_xs);
             }
         }
@@ -67,7 +66,7 @@ impl Shape for Group {
     fn material(&self, id: Uuid) -> Option<Material> {
         self.shapes
             .iter()
-            .filter_map(|s| s.borrow().material(id))
+            .filter_map(|s| s.read().unwrap().material(id))
             .next()
     }
 
@@ -75,10 +74,19 @@ impl Shape for Group {
         panic!("Group cannot have material")
     }
 
-    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: Uuid,
+        point: Tuple,
+        intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         self.shapes
             .iter()
-            .filter_map(|s| s.borrow().local_normal_at(id, point))
+            .filter_map(|s| {
+                s.read()
+                    .unwrap()
+                    .local_normal_at(id, point, intersection.clone())
+            })
             .next()
     }
 
@@ -93,23 +101,24 @@ impl Shape for Group {
     fn bounds(&self) -> BoundedBox {
         let mut bbox = BoundedBox::empty();
         for child in &self.shapes {
-            bbox.add_box(child.borrow().parent_space_bounds());
+            bbox.add_box(child.read().unwrap().parent_space_bounds());
         }
         bbox
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct GroupContainer(Rc<RefCell<Group>>);
+pub struct GroupContainer(Arc<RwLock<Group>>);
 
 impl GroupContainer {
     pub fn add_child(&self, shape: ShapeContainer) {
-        let weak_container = Rc::downgrade(self);
+        let weak_container = Arc::downgrade(self);
         shape
-            .borrow_mut()
+            .write()
+            .unwrap()
             .set_parent(WeakGroupContainer(weak_container));
 
-        let mut group = self.borrow_mut();
+        let mut group = self.0.write().unwrap();
         group.shapes.push(shape);
         group.bounding_box = group.bounds()
     }
@@ -117,13 +126,13 @@ impl GroupContainer {
 
 impl Default for GroupContainer {
     fn default() -> Self {
-        Self(Rc::new(RefCell::new(Group::new())))
+        Self(Arc::new(RwLock::new(Group::new())))
     }
 }
 
 impl From<Group> for GroupContainer {
     fn from(value: Group) -> Self {
-        GroupContainer(Rc::new(RefCell::new(value)))
+        GroupContainer(Arc::new(RwLock::new(value)))
     }
 }
 
@@ -134,7 +143,7 @@ impl Into<ShapeContainer> for GroupContainer {
 }
 
 impl Deref for GroupContainer {
-    type Target = Rc<RefCell<Group>>;
+    type Target = Arc<RwLock<Group>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -142,16 +151,16 @@ impl Deref for GroupContainer {
 }
 
 #[derive(Debug, Clone)]
-pub struct WeakGroupContainer(Weak<RefCell<Group>>);
+pub struct WeakGroupContainer(Weak<RwLock<Group>>);
 
 impl From<GroupContainer> for WeakGroupContainer {
     fn from(value: GroupContainer) -> Self {
-        WeakGroupContainer(Rc::downgrade(&value.0))
+        WeakGroupContainer(Arc::downgrade(&value.0))
     }
 }
 
 impl Deref for WeakGroupContainer {
-    type Target = Weak<RefCell<Group>>;
+    type Target = Weak<RwLock<Group>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -183,12 +192,26 @@ mod tests {
     fn adding_a_child_to_a_group() {
         let g = GroupContainer::from(Group::new());
         let s = ShapeContainer::from(Sphere::new());
-        let s_id = s.borrow().id();
+        let s_id = s.read().unwrap().id();
         g.add_child(s.clone());
-        assert!(!g.borrow().shapes.is_empty());
-        assert!(g.borrow().shapes.iter().any(|s| s.borrow().id() == s_id));
-        let s_parent_id = s.borrow().parent().unwrap().upgrade().unwrap().borrow().id;
-        assert_eq!(s_parent_id, g.borrow().id());
+        assert!(!g.read().unwrap().shapes.is_empty());
+        assert!(g
+            .read()
+            .unwrap()
+            .shapes
+            .iter()
+            .any(|s| s.read().unwrap().id() == s_id));
+        let s_parent_id = s
+            .read()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .upgrade()
+            .unwrap()
+            .read()
+            .unwrap()
+            .id;
+        assert_eq!(s_parent_id, g.read().unwrap().id());
     }
 
     #[test]
@@ -215,7 +238,7 @@ mod tests {
         g.add_child(s3.into());
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
 
-        let xs = g.borrow().local_intersect(r);
+        let xs = g.read().unwrap().local_intersect(r);
 
         assert_eq!(xs.len(), 4);
     }
@@ -230,7 +253,7 @@ mod tests {
         g.add_child(s.into());
         let r = Ray::new(Tuple::point(10.0, 0.0, -10.0), Tuple::vector(0.0, 0.0, 1.0));
 
-        let xs = g.borrow().intersects(r);
+        let xs = g.read().unwrap().intersects(r);
 
         assert_eq!(xs.len(), 2);
     }

@@ -3,7 +3,7 @@ use core::f64;
 use uuid::Uuid;
 
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
     util::EPSILON,
@@ -66,7 +66,12 @@ impl Shape for Plane {
         self.material = material;
     }
 
-    fn local_normal_at(&self, id: Uuid, _point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: Uuid,
+        _point: Tuple,
+        _intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         if self.id == id {
             Some(Tuple::vector(0.0, 1.0, 0.0))
         } else {
@@ -93,19 +98,38 @@ impl Shape for Plane {
 #[cfg(test)]
 mod tests {
 
+    use crate::shape::ShapeContainer;
+
     use super::*;
 
     #[test]
     fn the_normal_of_a_plane_is_constant_everywhere() {
         let p = Plane::new();
+        let p = ShapeContainer::from(p);
+        let i = ShapeIntersection::new(0.0, p.clone(), p.read().unwrap().id());
+
         let n1 = p
-            .local_normal_at(p.id(), Tuple::point(0.0, 0.0, 0.0))
+            .read()
+            .unwrap()
+            .local_normal_at(
+                p.read().unwrap().id(),
+                Tuple::point(0.0, 0.0, 0.0),
+                i.clone(),
+            )
             .unwrap();
         let n2 = p
-            .local_normal_at(p.id(), Tuple::point(10.0, 0.0, -10.0))
+            .read()
+            .unwrap()
+            .local_normal_at(
+                p.read().unwrap().id(),
+                Tuple::point(10.0, 0.0, -10.0),
+                i.clone(),
+            )
             .unwrap();
         let n3 = p
-            .local_normal_at(p.id(), Tuple::point(-5.0, 0.0, 150.0))
+            .read()
+            .unwrap()
+            .local_normal_at(p.read().unwrap().id(), Tuple::point(-5.0, 0.0, 150.0), i)
             .unwrap();
 
         assert_eq!(n1, Tuple::vector(0.0, 1.0, 0.0));

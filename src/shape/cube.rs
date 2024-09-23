@@ -3,7 +3,7 @@ use std::{f64::INFINITY, mem::swap};
 use uuid::Uuid;
 
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
     util::{self, eq_f64},
@@ -90,7 +90,12 @@ impl Shape for Cube {
         self.material = material;
     }
 
-    fn local_normal_at(&self, id: Uuid, point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: Uuid,
+        point: Tuple,
+        _intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         if self.id != id {
             return None;
         }
@@ -121,7 +126,7 @@ impl Shape for Cube {
 
 #[cfg(test)]
 mod tests {
-    use crate::tuple::Tuple;
+    use crate::{shape::ShapeContainer, tuple::Tuple};
 
     use super::*;
 
@@ -225,9 +230,15 @@ mod tests {
                 Tuple::vector(-1.0, 0.0, 0.0),
             ),
         ];
-        let c = Cube::new();
+        let c = ShapeContainer::from(Cube::new());
+        let i = ShapeIntersection::new(0.0, c.clone(), c.read().unwrap().id());
+
         for (point, normal) in input {
-            let n = c.local_normal_at(c.id, point).unwrap();
+            let n = c
+                .read()
+                .unwrap()
+                .local_normal_at(c.read().unwrap().id(), point, i.clone())
+                .unwrap();
             assert_eq!(n, normal);
         }
     }

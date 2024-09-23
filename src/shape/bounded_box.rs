@@ -289,7 +289,7 @@ mod test {
         shape.add_child(s.into());
         shape.add_child(c.into());
 
-        let bounds = shape.borrow().bounds();
+        let bounds = shape.read().unwrap().bounds();
 
         assert_eq!(bounds.min, Tuple::point(-4.5, -3.0, -5.0));
         assert_eq!(bounds.max, Tuple::point(4.0, 7.0, 4.5));

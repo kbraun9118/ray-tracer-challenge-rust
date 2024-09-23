@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::{
-    intersection::{ray::Ray, Intersection},
+    intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
     tuple::Tuple,
     util,
@@ -55,6 +55,36 @@ impl Triangle {
     pub(crate) fn p3(&self) -> Tuple {
         self.p3
     }
+
+    pub(crate) fn local_intersect_with_uv(&self, ray: Ray) -> Option<(Intersection, f64, f64)> {
+        let dir_cross_e2 = ray.direction() ^ self.e2;
+        let det = self.e1 * dir_cross_e2;
+
+        if det.abs() < util::EPSILON {
+            return None;
+        }
+
+        let f = 1.0 / det;
+        let p1_to_origin = ray.origin() - self.p1;
+        let u = f * (p1_to_origin * dir_cross_e2);
+
+        if u < 0.0 || u > 1.0 {
+            return None;
+        }
+
+        let origin_cross_e1 = p1_to_origin ^ self.e1;
+        let v = f * (ray.direction() * origin_cross_e1);
+
+        if v < 0.0 || u + v > 1.0 {
+            return None;
+        }
+
+        Some((
+            Intersection::new(f * (self.e2 * origin_cross_e1), self.id),
+            u,
+            v,
+        ))
+    }
 }
 
 impl Shape for Triangle {
@@ -63,29 +93,11 @@ impl Shape for Triangle {
     }
 
     fn local_intersect(&self, ray: Ray) -> Vec<Intersection> {
-        let dir_cross_e2 = ray.direction() ^ self.e2;
-        let det = self.e1 * dir_cross_e2;
-
-        if det.abs() < util::EPSILON {
-            return vec![];
+        if let Some((intersection, _, _)) = self.local_intersect_with_uv(ray) {
+            vec![intersection]
+        } else {
+            vec![]
         }
-
-        let f = 1.0 / det;
-        let p1_to_origin = ray.origin() - self.p1;
-        let u = f * (p1_to_origin * dir_cross_e2);
-
-        if u < 0.0 || u > 1.0 {
-            return vec![];
-        }
-
-        let origin_cross_e1 = p1_to_origin ^ self.e1;
-        let v = f * (ray.direction() * origin_cross_e1);
-
-        if v < 0.0 || u + v > 1.0 {
-            return vec![];
-        }
-
-        vec![Intersection::new(f * (self.e2 * origin_cross_e1), self.id)]
     }
 
     fn transformation(&self) -> Transformation {
@@ -108,7 +120,12 @@ impl Shape for Triangle {
         self.material = material;
     }
 
-    fn local_normal_at(&self, id: uuid::Uuid, _point: Tuple) -> Option<Tuple> {
+    fn local_normal_at(
+        &self,
+        id: uuid::Uuid,
+        _point: Tuple,
+        _intersection: ShapeIntersection,
+    ) -> Option<Tuple> {
         if self.id == id {
             Some(self.normal)
         } else {
@@ -136,6 +153,8 @@ impl Shape for Triangle {
 #[cfg(test)]
 mod tests {
 
+    use crate::shape::ShapeContainer;
+
     use super::*;
 
     fn test_triangle() -> Triangle {
@@ -160,13 +179,41 @@ mod tests {
     #[test]
     fn finding_the_normal_on_a_triangle() {
         let t = test_triangle();
-        let n1 = t.normal_at(t.id(), Tuple::point(0.0, 0.5, 0.0)).unwrap();
-        let n2 = t.normal_at(t.id(), Tuple::point(-0.5, 0.75, 0.0)).unwrap();
-        let n3 = t.normal_at(t.id(), Tuple::point(0.5, 0.25, 0.0)).unwrap();
+        let normal = t.normal;
+        let t = ShapeContainer::from(t);
+        let i = ShapeIntersection::new(0.0, t.clone(), t.read().unwrap().id());
 
-        assert_eq!(n1, t.normal);
-        assert_eq!(n2, t.normal);
-        assert_eq!(n3, t.normal);
+        let n1 = t
+            .read()
+            .unwrap()
+            .normal_at(
+                t.read().unwrap().id(),
+                Tuple::point(0.0, 0.5, 0.0),
+                i.clone(),
+            )
+            .unwrap();
+        let n2 = t
+            .read()
+            .unwrap()
+            .normal_at(
+                t.read().unwrap().id(),
+                Tuple::point(-0.5, 0.75, 0.0),
+                i.clone(),
+            )
+            .unwrap();
+        let n3 = t
+            .read()
+            .unwrap()
+            .normal_at(
+                t.read().unwrap().id(),
+                Tuple::point(0.5, 0.25, 0.0),
+                i.clone(),
+            )
+            .unwrap();
+
+        assert_eq!(n1, normal);
+        assert_eq!(n2, normal);
+        assert_eq!(n3, normal);
     }
 
     #[test]

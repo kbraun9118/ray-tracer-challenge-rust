@@ -1,4 +1,5 @@
 use indicatif::{ProgressBar, ProgressStyle};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
     canvas::Canvas, intersection::ray::Ray, transformation::Transformation, tuple::Tuple,
@@ -59,12 +60,20 @@ impl Camera {
         let pb = ProgressBar::new((self.v_size * self.h_size) as u64);
         pb.set_style(ProgressStyle::with_template("{wide_bar} {percent}% {eta} {msg}").unwrap());
 
-        for y in 0..self.v_size as usize {
-            for x in 0..self.h_size as usize {
+        let vecs = (0..self.v_size as usize)
+            .flat_map(|y| (0..self.h_size as usize).map(move |x| (x, y)))
+            .par_bridge()
+            .map(|(x, y)| {
                 let ray = self.ray_for_pixel(x, y);
                 let color = world.color_at(ray);
-                image[(x, y)] = color;
                 pb.inc(1);
+                (x, y, color)
+            })
+            .collect_vec_list();
+
+        for v in vecs {
+            for (x, y, color) in v {
+                image[(x, y)] = color;
             }
         }
         pb.finish_with_message("Rendering complete");

@@ -37,16 +37,19 @@ fn main() -> RayTraceResult<()> {
 
             c[(x, y)] = if let Some(hit) = intersections.hit() {
                 let point = r.position(hit.t());
-                let normal = hit.object().borrow().normal_at(sphere.id(), point).unwrap();
+                let normal = hit
+                    .object()
+                    .write()
+                    .unwrap()
+                    .normal_at(sphere.id(), point, hit.clone())
+                    .unwrap();
                 let eye = -r.direction();
-                hit.object().borrow().material(hit.object_id()).unwrap().lighting(
-                    hit.object().clone(),
-                    light,
-                    point,
-                    eye,
-                    normal,
-                    false,
-                )
+                hit.object()
+                    .write()
+                    .unwrap()
+                    .material(hit.object_id())
+                    .unwrap()
+                    .lighting(hit.object().clone(), light, point, eye, normal, false)
             } else {
                 Colors::Black.into()
             };
