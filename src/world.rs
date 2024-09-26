@@ -92,10 +92,11 @@ impl World {
                 .unwrap();
             if material.reflective() > 0.0 && material.transparency() > 0.0 {
                 let reflectance = comps.schlick();
-                return surface + reflected * reflectance + refracted * (1.0 - reflectance);
+                color += surface + reflected * reflectance + refracted * (1.0 - reflectance);
+            } else {
+                color += surface + reflected + refracted
             }
 
-            color += surface + reflected + refracted
         }
 
         color
@@ -588,7 +589,48 @@ mod tests {
 
         let comps = PrepComputations::new(xs[2].clone(), r, &xs);
         let c = w.refracted_color(&comps, 5);
-        assert_eq!(c, Color::new(0.0, 0.9988745506795582, 0.04721898034382347));
+        assert_eq!(c, Color::new(0.0, 0.99887, 0.04722));
+    }
+
+    #[test]
+    fn shade_hit_with_a_transparent_material() {
+        let mut w = World::default();
+        let mut floor = Plane::new();
+        let floor_id = floor.id();
+        floor.set_transformation(Transformation::default().translation(0.0, -1.0, 0.0));
+        floor.set_material(
+            Material::new()
+                .with_transparency(0.5)
+                .with_refractive_index(1.5),
+        );
+        w.add_shape(floor.into());
+
+        let mut ball = Sphere::new();
+        ball.set_material(
+            Material::new()
+                .with_color(Color::new(1.0, 0.0, 0.0))
+                .with_ambient(0.5),
+        );
+        ball.set_transformation(Transformation::default().translation(0.0, -3.5, -0.5));
+        w.add_shape(ball.into());
+
+        let r = Ray::new(
+            Tuple::point(0.0, 0.0, -3.0),
+            Tuple::vector(0.0, -(2f64.sqrt()) / 2.0, 2f64.sqrt() / 2.0),
+        );
+
+        let xs = intersections!(ShapeIntersection::new(
+            2f64.sqrt(),
+            w.shapes()
+                .iter()
+                .find(|s| s.read().unwrap().id() == floor_id)
+                .unwrap()
+                .clone(),
+            floor_id
+        ));
+        let comps = PrepComputations::new(xs[0].clone(), r, &xs);
+        let color = w.shade_hit(&comps);
+        assert_eq!(color, Color::new(0.93642, 0.68642, 0.68642));
     }
 
     #[test]
