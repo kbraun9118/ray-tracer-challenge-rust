@@ -125,12 +125,11 @@ impl World {
 
             let r = Ray::new(point, direction);
 
-            let h = self.intersects(r).hit();
-
-            return match h {
-                Some(h) if h.t() < distance => true,
-                _ => false,
-            };
+            if let Some(h) = self.intersects(r).hit() {
+                if h.t() < distance {
+                    return true;
+                }
+            }
         }
         false
     }
