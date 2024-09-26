@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::{
     intersection::{ray::Ray, Intersection, ShapeIntersection},
     transformation::Transformation,
@@ -29,7 +31,7 @@ impl SmoothTriangle {
 }
 
 impl Shape for SmoothTriangle {
-    fn id(&self) -> uuid::Uuid {
+    fn id(&self) -> Uuid {
         self.triangle.id()
     }
 
@@ -48,7 +50,7 @@ impl Shape for SmoothTriangle {
         self.triangle.set_transformation(transformation);
     }
 
-    fn material(&self, id: uuid::Uuid) -> Option<Material> {
+    fn material(&self, id: Uuid) -> Option<Material> {
         self.triangle.material(id)
     }
 
@@ -58,7 +60,7 @@ impl Shape for SmoothTriangle {
 
     fn local_normal_at(
         &self,
-        id: uuid::Uuid,
+        id: Uuid,
         _point: Tuple,
         intersection: ShapeIntersection,
     ) -> Option<Tuple> {
@@ -83,6 +85,10 @@ impl Shape for SmoothTriangle {
 
     fn bounds(&self) -> BoundedBox {
         self.triangle.bounds()
+    }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.triangle.id() == id
     }
 }
 

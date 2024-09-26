@@ -93,6 +93,10 @@ impl Shape for Plane {
             Tuple::point(f64::INFINITY, 0.0, f64::INFINITY),
         )
     }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.id == id
+    }
 }
 
 #[cfg(test)]

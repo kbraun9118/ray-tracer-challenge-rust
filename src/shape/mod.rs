@@ -36,6 +36,10 @@ impl ShapeContainer {
     pub fn id(&self) -> Uuid {
         self.read().unwrap().id()
     }
+
+    fn includes(&self, id: Uuid) -> bool {
+        self.read().unwrap().contains(id)
+    }
 }
 
 impl<T: Shape + Sync + Send + 'static> From<T> for ShapeContainer {
@@ -74,6 +78,7 @@ pub trait Shape: Debug {
     fn parent(&self) -> Option<WeakGroupContainer>;
     fn set_parent(&mut self, parent: WeakGroupContainer);
     fn bounds(&self) -> BoundedBox;
+    fn contains(&self, id: Uuid) -> bool;
 
     fn intersects(&self, ray: Ray) -> Vec<Intersection> {
         let ray = self.transformation().inverse().unwrap() * ray;
@@ -223,6 +228,10 @@ mod tests {
 
         fn bounds(&self) -> BoundedBox {
             BoundedBox::new(Tuple::origin(), Tuple::origin())
+        }
+
+        fn contains(&self, id: Uuid) -> bool {
+            self.id == id
         }
     }
 

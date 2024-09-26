@@ -122,6 +122,10 @@ impl Shape for Cube {
     fn bounds(&self) -> BoundedBox {
         BoundedBox::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
     }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.id == id
+    }
 }
 
 #[cfg(test)]
