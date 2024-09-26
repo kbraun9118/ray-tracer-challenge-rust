@@ -1,6 +1,6 @@
 use std::{
     cmp::{max, min},
-    ops::{Add, Mul, Sub},
+    ops::{Add, AddAssign, Mul, Sub},
 };
 
 use crate::tuple::Tuple;
@@ -92,6 +92,12 @@ impl Add for Color {
 
     fn add(self, rhs: Self) -> Self::Output {
         (Tuple::from(self) + Tuple::from(rhs)).into()
+    }
+}
+
+impl AddAssign for Color {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
     }
 }
 

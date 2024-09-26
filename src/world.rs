@@ -13,14 +13,14 @@ use crate::{
 #[derive(Debug)]
 pub struct World {
     shapes: Vec<ShapeContainer>,
-    light: Option<PointLight>,
+    lights: Vec<PointLight>,
 }
 
 impl World {
     pub fn new() -> Self {
         Self {
             shapes: vec![],
-            light: None,
+            lights: vec![],
         }
     }
 
@@ -36,13 +36,12 @@ impl World {
         &mut self.shapes
     }
 
-    pub fn light(&self) -> &Option<PointLight> {
-        &self.light
+    pub fn lights(&self) -> &Vec<PointLight> {
+        &self.lights
     }
 
-    pub fn set_light(&mut self, point_light: PointLight) -> &Self {
-        self.light = Some(point_light);
-        self
+    pub fn add_light(&mut self, point_light: PointLight) {
+        self.lights.push(point_light);
     }
 
     pub fn intersects(&self, r: Ray) -> IntersectionHeap {
@@ -64,8 +63,9 @@ impl World {
 
     pub fn shade_hit_recursive(&self, comps: &PrepComputations, remaining: usize) -> Color {
         let shadowed = self.is_shadowed(comps.over_point());
+        let mut color = Colors::Black.into();
 
-        if let Some(light) = self.light {
+        for light in self.lights() {
             let surface = comps
                 .object()
                 .read()
@@ -74,7 +74,7 @@ impl World {
                 .unwrap_or_default()
                 .lighting(
                     comps.object().clone(),
-                    light,
+                    *light,
                     comps.over_point(),
                     comps.eye_v(),
                     comps.normal_v(),
@@ -95,10 +95,10 @@ impl World {
                 return surface + reflected * reflectance + refracted * (1.0 - reflectance);
             }
 
-            surface + reflected + refracted
-        } else {
-            Colors::Black.into()
+            color += surface + reflected + refracted
         }
+
+        color
     }
 
     pub fn color_at(&self, ray: Ray) -> Color {
@@ -117,7 +117,7 @@ impl World {
     }
 
     pub fn is_shadowed(&self, point: Tuple) -> bool {
-        if let Some(l) = self.light {
+        for l in self.lights() {
             let v = l.position() - point;
 
             let distance = v.magnitude();
@@ -127,13 +127,12 @@ impl World {
 
             let h = self.intersects(r).hit();
 
-            match h {
+            return match h {
                 Some(h) if h.t() < distance => true,
                 _ => false,
-            }
-        } else {
-            false
+            };
         }
+        false
     }
 
     fn reflected_color(&self, comps: &PrepComputations, remaining: usize) -> Color {
@@ -219,7 +218,7 @@ impl Default for World {
         let light = PointLight::new(Tuple::point(-10.0, 10.0, -10.0), Colors::White.into());
         Self {
             shapes: vec![s1.into(), s2.into()],
-            light: Some(light),
+            lights: vec![light],
         }
     }
 }
@@ -240,7 +239,7 @@ mod tests {
         let w = World::new();
 
         assert_eq!(0, w.shapes().len());
-        assert_eq!(&None, w.light());
+        assert_eq!(0, w.lights().len());
     }
 
     #[test]
@@ -256,9 +255,9 @@ mod tests {
 
         let world = World::default();
 
-        assert!(world.light.is_some());
+        assert!(!world.lights.is_empty());
 
-        assert_eq!(light, world.light().unwrap());
+        assert_eq!(light, world.lights()[0]);
         assert!(world
             .shapes()
             .iter()
@@ -302,10 +301,10 @@ mod tests {
     #[test]
     fn shading_an_intersection_from_the_inside() {
         let mut w = World::default();
-        w.light = Some(PointLight::new(
+        w.lights = vec![PointLight::new(
             Tuple::point(0.0, 0.25, 0.0),
             Colors::White.into(),
-        ));
+        )];
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
         let shape = w.shapes()[1].clone();
         let i = ShapeIntersection::new(0.5, shape.clone(), shape.id());
@@ -401,10 +400,10 @@ mod tests {
     #[test]
     fn shade_hit_is_given_an_intersection_in_shadow() {
         let mut w = World::new();
-        w.light = Some(PointLight::new(
+        w.lights = vec![PointLight::new(
             Tuple::point(0.0, 0.0, -10.0),
             Colors::White.into(),
-        ));
+        )];
 
         let s1 = Sphere::new();
         w.add_shape(s1.into());
@@ -467,7 +466,7 @@ mod tests {
     #[test]
     fn color_at_with_mutually_reflective_surfaces() {
         let mut w = World::new();
-        w.set_light(PointLight::new(Tuple::origin(), Colors::White.into()));
+        w.add_light(PointLight::new(Tuple::origin(), Colors::White.into()));
 
         let mut lower = Plane::new();
         lower.set_material(Material::new().with_reflective(1.0));
