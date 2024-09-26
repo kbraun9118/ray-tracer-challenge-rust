@@ -205,6 +205,10 @@ impl Shape for Cone {
             Tuple::point(limit, self.maximum, limit),
         )
     }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.id == id
+    }
 }
 
 #[cfg(test)]

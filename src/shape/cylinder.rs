@@ -185,6 +185,10 @@ impl Shape for Cylinder {
             Tuple::point(1.0, self.maximum, 1.0),
         )
     }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.id == id
+    }
 }
 
 #[cfg(test)]
@@ -258,7 +262,8 @@ mod tests {
         let i = ShapeIntersection::new(0.0, cyl.clone(), cyl.read().unwrap().id());
         for (point, normal) in exs {
             let n = cyl
-                .read().unwrap()
+                .read()
+                .unwrap()
                 .local_normal_at(cyl.id(), point, i.clone())
                 .unwrap();
             assert_eq!(n, normal);
@@ -363,7 +368,11 @@ mod tests {
         let i = ShapeIntersection::new(0.0, cyl.clone(), cyl.read().unwrap().id());
 
         for (point, normal) in exs {
-            let n = cyl.read().unwrap().local_normal_at(cyl.id(), point, i.clone()).unwrap();
+            let n = cyl
+                .read()
+                .unwrap()
+                .local_normal_at(cyl.id(), point, i.clone())
+                .unwrap();
             assert_eq!(n, normal);
         }
     }

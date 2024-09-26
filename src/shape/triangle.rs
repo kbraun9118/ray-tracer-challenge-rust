@@ -148,6 +148,10 @@ impl Shape for Triangle {
         bbox.add_point(self.p3);
         bbox
     }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.id == id
+    }
 }
 
 #[cfg(test)]

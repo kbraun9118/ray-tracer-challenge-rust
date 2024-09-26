@@ -105,6 +105,10 @@ impl Shape for Sphere {
     fn bounds(&self) -> BoundedBox {
         BoundedBox::new(Tuple::point(-1.0, -1.0, -1.0), Tuple::point(1.0, 1.0, 1.0))
     }
+
+    fn contains(&self, id: Uuid) -> bool {
+        self.id == id
+    }
 }
 
 impl From<Transformation> for Sphere {
