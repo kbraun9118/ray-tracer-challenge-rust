@@ -82,7 +82,7 @@ fn main() -> RayTraceResult<()> {
     world.add_shape(right.into());
     world.add_shape(left.into());
     world.add_shape(back_wall.into());
-    world.set_light(PointLight::new(
+    world.add_light(PointLight::new(
         Tuple::point(-10.0, 10.0, -10.0),
         Colors::White.into(),
     ));
